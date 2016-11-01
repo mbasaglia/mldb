@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from django.contrib import admin
 from . import models
 
+
 admin.site.register(models.Episode)
 admin.site.register(models.Character)
 admin.site.register(models.Line)

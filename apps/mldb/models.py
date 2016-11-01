@@ -54,6 +54,9 @@ class Episode(models.Model):
     def slug_to_title(slug):
         return urllib.unquote(slug.replace("_", " ")).replace(" (episode)", "")
 
+    def __unicode__(self):
+        return "%04i %s" % (self.id, self.title)
+
 
 class Character(models.Model):
     name = models.CharField(max_length=128, db_index=True, blank=False)
@@ -64,8 +67,11 @@ class Character(models.Model):
         return re.sub(
             "[^a-zA-Z0-0_]",
             "",
-            unidecode(name).lower().replace(" ", "_")
+            unidecode(name.decode("utf8")).lower().replace(" ", "_")
         )
+
+    def __unicode__(self):
+        return self.name
 
 
 class Line(models.Model):
@@ -76,3 +82,6 @@ class Line(models.Model):
     characters = models.ManyToManyField(Character)
     order = models.SmallIntegerField()
     text = models.TextField(blank=False)
+
+    def __unicode__(self):
+        return self.text
