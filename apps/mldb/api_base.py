@@ -25,11 +25,12 @@ from django.utils.six.moves.http_client import responses as http_codes
 from django.conf.urls import url
 from django.conf import settings
 
+
 class ApiResponse(http.HttpResponse):
-    def __init__(self, content, status=200):
+    def __init__(self, content, status=200, pretty=False):
         http.HttpResponse.__init__(
             self,
-            self.to_string(content),
+            self.to_string(content, pretty),
             content_type=self.mime_type,
             status=status
         )
@@ -45,7 +46,9 @@ class JsonResponse(ApiResponse):
     """
     mime_type = "application/json"
 
-    def to_string(self, content):
+    def to_string(self, content, pretty):
+        if pretty:
+            return json.dumps(content, indent=4)
         return json.dumps(content)
 
 
@@ -55,7 +58,7 @@ class PonResponse(ApiResponse):
     """
     mime_type = "text/plain"
 
-    def to_string(self, content):
+    def to_string(self, content, pretty):
         return repr(content)
 
 
@@ -105,7 +108,8 @@ class BoundViewWrapper(object):
         response_type = self.this.response_types[type]
         try:
             if not self.methods or request.method in self.methods:
-                return response_type(self(*args, **kwargs))
+                pretty = "pretty" in request.GET
+                return response_type(self(*args, **kwargs), pretty=pretty)
             return response_type.error(405)
         except http.Http404:
             return response_type.error(404)
@@ -124,8 +128,9 @@ class BoundViewWrapper(object):
         """
         Url regex pattern for the given name
         """
-        return self.pattern or (
-            '^%s\.(?P<type>%s)$' %  (name, "|".join(self.this.response_types))
+        return '^%s\.(?P<type>%s)$' %  (
+            self.pattern or name,
+            "|".join(self.this.response_types)
         )
 
     def url(self, name):
