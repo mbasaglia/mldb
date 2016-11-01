@@ -19,14 +19,15 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import re
+import urllib
 from django.db import models
 from unidecode import unidecode_expect_ascii as unidecode
 
 
 class Episode(models.Model):
     id = models.PositiveSmallIntegerField(primary_key=True)
-    slug = models.CharField(max_length=128, unique=True)
-    title = models.CharField(max_length=128, unique=True)
+    slug = models.CharField(max_length=128, unique=True, blank=False)
+    title = models.CharField(max_length=128, unique=True, blank=False)
 
     @property
     def season(self):
@@ -49,28 +50,29 @@ class Episode(models.Model):
         """
         return season * 100 + number
 
+    @staticmethod
+    def slug_to_title(slug):
+        return urllib.unquote(slug.replace("_", " ")).replace(" (episode)", "")
+
 
 class Character(models.Model):
-    name = models.CharField(max_length=128)
-    slug = models.CharField(max_length=128, unique=True)
+    name = models.CharField(max_length=128, db_index=True, blank=False)
+    slug = models.CharField(max_length=128, unique=True, blank=False)
 
-    def save(self, *args, **kwargs):
-        """
-        Updates the slug before saving
-        """
-        self.slug = re.sub(
+    @staticmethod
+    def name_to_slug(name):
+        return re.sub(
             "[^a-zA-Z0-0_]",
             "",
-            unidecode(self.name).lower().replace(" ", "_")
+            unidecode(name).lower().replace(" ", "_")
         )
-        super(Character, self).save(*args, **kwargs)
 
 
 class Line(models.Model):
     class Meta:
-        unique_together = (('episode', 'text'),)
+        unique_together = (('episode', 'order'),)
 
     episode = models.ForeignKey(Episode, on_delete=models.CASCADE)
     characters = models.ManyToManyField(Character)
     order = models.SmallIntegerField()
-    text = models.TextField()
+    text = models.TextField(blank=False)
