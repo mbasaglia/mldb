@@ -1,0 +1,4 @@
+project/settings.py
+*.kdev4
+env/
+*.pyc
