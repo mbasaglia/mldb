@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 \file
 
@@ -19,9 +18,15 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+import os
 import sys
-import project.load_env
-from django.core.management import execute_from_command_line
 
-if __name__ == "__main__":
-    execute_from_command_line(sys.argv)
+py_version = "python%i.%i" % sys.version_info[:2]
+root = os.path.dirname(os.path.dirname(__file__))
+virtualenv_dirname = "env"
+virtualenv_path = os.path.join(root, virtualenv_dirname,
+                               "lib", py_version, "site-packages")
+if os.path.exists(virtualenv_path) and virtualenv_path not in sys.path:
+    sys.path.insert(0, virtualenv_path)
+
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "project.settings")

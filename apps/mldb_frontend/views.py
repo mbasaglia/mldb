@@ -18,7 +18,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-from apps.simple_page.page import Page
+from ..simple_page.page import Page
 
 
 class MldbPage(Page):
