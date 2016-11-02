@@ -34,14 +34,14 @@ class Episode(models.Model):
         """
         Season number of this episode
         """
-        return self.id // 100
+        return Episode.split_id(self.id)[0]
 
     @property
     def number(self):
         """
         Number of this episode within the season
         """
-        return self.id % 100
+        return Episode.split_id(self.id)[1]
 
     @staticmethod
     def make_id(season, number):
@@ -54,8 +54,23 @@ class Episode(models.Model):
     def slug_to_title(slug):
         return urllib.unquote(slug.replace("_", " ")).replace(" (episode)", "")
 
+    @staticmethod
+    def split_id(id):
+        """
+        Splits a numeric id into a (season, number) pair
+        """
+        return divmod(id, 100)
+
+    @staticmethod
+    def format_id(id):
+        return "%02i/%02i" % Episode.split_id(id)
+
+    @property
+    def formatted_id(self):
+        return Episode.format_id(self.id)
+
     def __unicode__(self):
-        return "%04i %s" % (self.id, self.title)
+        return "%s %s" % (self.formatted_id, self.title)
 
 
 class Character(models.Model):
@@ -85,3 +100,7 @@ class Line(models.Model):
 
     def __unicode__(self):
         return self.text
+
+    @property
+    def character_slugs(self):
+        return self.characters.values_list("slug", flat=True)

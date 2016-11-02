@@ -15,7 +15,35 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 {% endcomment %}
 {% load simple_page %}
+
 <section>
-<header>{% section h2 %}Test{% endsection %}</header>
-<p>Hello World</p>
+<header>{% section h2 %}{{ page.site_name }}{% endsection %}</header>
+<p>Todo: description of this site</p>
+</section>
+
+<section>
+<header>{% section h2 %}Stats{% endsection %}</header>
+<p>There are {{ n_characters }} character{{ n_characters|pluralize }},
+    who spoke a total of {{ n_lines }} line{{ n_lines|pluralize }}
+    across {{ n_episodes }} episode{{ n_episodes|pluralize }}.</p>
+{% if best %}
+    <p>The most talkative character is
+    <a href="{% url "character" name=best.name %}">{{ best.name }}</a>,
+    who spoke {{ best.n_lines }} line{{ best.n_lines|pluralize }} and
+    appeared in {{ best.episodes }} episode{{ episodes|pluralize }}.</p>
+{% endif %}
+</section>
+
+<section>
+<header>{% section h2 %}Episodes{% endsection %}</header>
+{% for season in seasons %}
+    {% section h3 %}Season {{ season.number }}{% endsection %}</header>
+    <ol>
+    {% for episode in season.episodes %}
+        <li><a
+            href="{% url "episode" season=season.number number=episode.number %}"
+        >{{ episode.title }}</a></li>
+    {% endfor %}
+    </ol>
+{% endfor %}
 </section>

@@ -18,13 +18,124 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-from ..simple_page.page import Page
+from django.shortcuts import get_object_or_404
+from django.urls import reverse_lazy
+from django.db.models import Count
+
+from ..simple_page.page import Page, LinkGroup, Link
+from ..mldb import models
 
 
 class MldbPage(Page):
-    site_name = "MlDb"
+    site_name = "mldb"
+    footer = [
+        LinkGroup(site_name, [
+            Link(reverse_lazy("home"), "Home"),
+            Link(reverse_lazy("characters"), "Characters"),
+            Link("todo", "API"),
+        ]),
+    ]
+
+
+def annotate_characters(character_queryset):
+    return (
+        character_queryset
+        .annotate(n_lines=Count("line"),
+                  episodes=Count("line__episode", distinct=True))
+        .order_by("-episodes", "-n_lines", "name")
+    )
+
+
+def season_episodes(season):
+    return (
+        models.Episode.objects
+        .filter(id__gt=season*100, id__lt=(season+1)*100)
+        .order_by("id")
+    )
 
 
 def home(request):
+    latest_episode = models.Episode.objects.latest("id")
+    latest_season = latest_episode.season if latest_episode else 0
+    ctx = {
+        "n_characters": models.Character.objects.count(),
+        "n_lines": models.Line.objects.count(),
+        "n_episodes": models.Episode.objects.count(),
+        "best":  annotate_characters(models.Character.objects).first(),
+        "seasons": [
+            {
+                "number": season,
+                "episodes": season_episodes(season),
+            }
+            for season in range(1, latest_season + 1)
+        ],
+    }
     page = MldbPage("Home", "mldb/home.html")
-    return page.render(request)
+    return page.render(request, ctx)
+
+
+def characters(request):
+    ctx = {
+        "characters": annotate_characters(models.Character.objects)
+    }
+    page = MldbPage("Characters", "mldb/character_list.html")
+    return page.render(request, ctx)
+
+
+def character(request, name):
+    character = get_object_or_404(models.Character, name=name)
+    episodes = (
+        models.Episode.objects
+        .filter(line__characters__in=[character])
+        .annotate(n_lines=Count('id'))
+        .order_by("id")
+        .distinct()
+    )
+    ctx = {
+        "character": character,
+        "episodes": episodes,
+        "line_count": sum(episodes.values_list("n_lines", flat=True))
+    }
+    page = MldbPage(character.name, "mldb/character.html")
+    return page.render(request, ctx)
+
+
+def season(request, season):
+    season = int(season)
+    ctx = {
+        "season": "%02i" % season,
+        "episodes": season_episodes(season),
+        "characters": annotate_characters(
+            models.Character.objects
+            .filter(line__episode__gt=100, line__episode__lt=202)
+        ).distinct()
+    }
+    page = MldbPage("Season %s" % season, "mldb/season.html")
+    return page.render(request, ctx)
+
+
+def episode(request, season, number):
+    season = int(season)
+    number = int(number)
+    episode = get_object_or_404(
+        models.Episode,
+        id=models.Episode.make_id(season, number)
+    )
+    ctx = {
+        "episode": episode,
+        "characters": models.Character.objects
+            .filter(line__episode=episode)
+            .annotate(n_lines=Count("line"))
+            .order_by("-n_lines", "name"),
+        "lines": models.Line.objects
+            .filter(episode=episode)
+            .order_by("order")
+    }
+    page = MldbPage(episode.title, "mldb/episode.html")
+    return page.render(request, ctx)
+
+
+def search(request):
+    pass
+
+

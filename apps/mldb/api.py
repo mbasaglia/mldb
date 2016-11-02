@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 from django.shortcuts import get_object_or_404
 from django.forms.models import model_to_dict
-from api_base import ApiBase, view
+from ..simple_page.api_base import ApiBase, view
 import models
 
 
@@ -40,11 +40,14 @@ class Api(ApiBase):
             name=name
         )
         data = model_to_dict(character)
-        #data["lines"] = list(
-            #models.Line.objects
-            #.filter(characters__in=[character])
-            #.values_list("text", flat=True)
-        #)
+        data["episodes"] = map(
+            models.Episode.format_id,
+            models.Line.objects
+            .filter(characters__in=[character])
+            .order_by("episode")
+            .values_list("episode", flat=True)
+            .distinct()
+        )
         return data
 
     @view
