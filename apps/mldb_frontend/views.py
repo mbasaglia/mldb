@@ -27,17 +27,28 @@ from ..mldb import models
 
 
 class MldbPage(Page):
+    """
+    Page with site-specific defaults
+    """
     site_name = "mldb"
     footer = [
         LinkGroup(site_name, [
             Link(reverse_lazy("home"), "Home"),
             Link(reverse_lazy("characters"), "Characters"),
-            Link("todo", "API"),
+        ]),
+        LinkGroup("API", [
+            Link(reverse_lazy("api:docs"), "Documentation"),
+            Link(reverse_lazy("api:explore"), "Explore"),
+        ]),
+        LinkGroup("Sources", [
         ]),
     ]
 
 
 def annotate_characters(character_queryset):
+    """
+    Annotates line and episode counts and sorts a Character model queryset
+    """
     return (
         character_queryset
         .annotate(n_lines=Count("line"),
@@ -47,6 +58,9 @@ def annotate_characters(character_queryset):
 
 
 def season_episodes(season):
+    """
+    Returns a queryset with all episodes from the given season
+    """
     return (
         models.Episode.objects
         .filter(id__gt=season*100, id__lt=(season+1)*100)
@@ -55,6 +69,9 @@ def season_episodes(season):
 
 
 def home(request):
+    """
+    Homepage view
+    """
     latest_episode = models.Episode.objects.latest("id")
     latest_season = latest_episode.season if latest_episode else 0
     ctx = {
@@ -75,6 +92,9 @@ def home(request):
 
 
 def characters(request):
+    """
+    Full list of characters
+    """
     ctx = {
         "characters": annotate_characters(models.Character.objects)
     }
@@ -83,6 +103,9 @@ def characters(request):
 
 
 def character(request, name):
+    """
+    Character details
+    """
     character = get_object_or_404(models.Character, name=name)
     episodes = (
         models.Episode.objects
@@ -101,6 +124,9 @@ def character(request, name):
 
 
 def season(request, season):
+    """
+    List of episodes in the given season
+    """
     season = int(season)
     ctx = {
         "season": "%02i" % season,
@@ -115,6 +141,9 @@ def season(request, season):
 
 
 def episode(request, season, number):
+    """
+    Episode details
+    """
     season = int(season)
     number = int(number)
     episode = get_object_or_404(
@@ -136,6 +165,7 @@ def episode(request, season, number):
 
 
 def search(request):
+    # TODO
     pass
 
 

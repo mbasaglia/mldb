@@ -18,13 +18,12 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-from django.conf.urls import url, include
-from django.contrib import admin
-from apps.mldb.api import api
+from django.conf.urls import url
 
+import api_views
+
+app_name = "api"
 urlpatterns = [
-    url(r'^admin/', admin.site.urls),
-    url(r'^api/', include("apps.mldb_frontend.api_urls")),
-    url(r'^api/', include(api.url_patterns())),
-    url(r'', include("apps.mldb_frontend.urls")),
+    url(r'^$', api_views.documentation, name="docs"),
+    url(r'^explore/?$', api_views.explore, name="explore"),
 ]
