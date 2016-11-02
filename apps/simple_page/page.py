@@ -35,29 +35,43 @@ class LinkGroup(object):
     def add_link(self, link):
         self.links.append(link)
 
+    def __iter__(self):
+        return iter(self.links)
+
 
 class Page(object):
     site_name = ""
     template_root = "simple_page/"
     base_template = template_root + "base.html"
+    footer = [] # List of link groups
+    menu = LinkGroup()
 
-    def __init__(self, title, blocks={"head": None, "contents": None}):
+    def __init__(self, title, blocks):
         self.title = title
-        self.menu = LinkGroup()
         self.current_page = None # Url in menu
         self.breadcrumbs = LinkGroup()
-        self.footer = [] # List of link groups
-        self.blocks = blocks # Dict block name -> template path
+        if type(blocks) is str:
+            self.blocks = {
+                "contents": blocks,
+                "head": self.template_root + "inline_css.html",
+            }
+        else:
+            self.blocks = blocks # Dict block name -> template path
 
     def context(self, extra_context):
-        ctx = self._obj_to_dict(Page)
-        ctx.update(self._obj_to_dict(self))
-        ctx.update(self.blocks)
+        ctx = {
+            "page": self
+        }
         ctx.update(extra_context)
         return ctx
 
     def render(self, request, extra_context={}, status_code=None):
-        return render(request, self.base_template, self.context(extra_context), status_code)
+        return render(
+            request,
+            self.base_template,
+            self.context(extra_context),
+            status_code
+        )
 
     def _obj_to_dict(self, object):
         return {

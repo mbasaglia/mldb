@@ -27,16 +27,25 @@ from django.template.base import kwarg_re, TemplateSyntaxError
 
 register = template.Library()
 
+
+def make_attrs(dict):
+    """
+    Returns a string containing properly formatted HTML attributes from dict
+    """
+    return " ".join(
+        "%s='%s'" % (name, escape(value))
+        for name, value in dict.iteritems()
+    )
+
+
 @register.simple_tag
 def section_header(text, elem, id=None, **extra_attrs):
+    """
+    Creates a section header linking to itself
+    """
 
     if "class" not in extra_attrs:
         extra_attrs["class"] = "section"
-
-    extra_attrs_string =  " ".join(
-        "%s='%s'" % (name, escape(value))
-        for name, value in extra_attrs.iteritems()
-    )
 
     return mark_safe(
         "<{elem} id='{id}' {extra_attrs}><a href='#{id}'>{text}</a></{elem}>"
@@ -44,11 +53,15 @@ def section_header(text, elem, id=None, **extra_attrs):
             elem=elem,
             id=id if id is not None else slugify(strip_tags(text)),
             text=text,
-            extra_attrs=extra_attrs_string
+            extra_attrs=make_attrs(extra_attrs)
         )
     )
 
+
 def token_to_args(parser, token, detect_as=True):
+    """
+    Parses arguments passed to {% section %}
+    """
     bits = token.split_contents()[1:]
     args = []
     kwargs = {}
@@ -74,6 +87,9 @@ def token_to_args(parser, token, detect_as=True):
 
 @register.tag
 def section(parser, token):
+    """
+    Simital to section_header() but it creates a long tag to wrap the title text
+    """
     args = token_to_args(parser, token)
     nodelist = parser.parse(('endsection',))
     parser.delete_first_token()
@@ -81,6 +97,9 @@ def section(parser, token):
 
 
 class SectionNode(template.Node):
+    """
+    Template node for {% section %}
+    """
     def __init__(self, nodelist, args, kwargs, asvar):
         self.nodelist = nodelist
         self.elem = str(args[0])
@@ -101,3 +120,28 @@ class SectionNode(template.Node):
             return ''
         else:
             return result
+
+
+@register.simple_tag(takes_context=True)
+def link(context, target, text=None, **attrs):
+    """
+    Renders a link.
+    If the target points to the current page, it renders a span instead.
+    """
+    if text is None:
+        text = target
+    request = context["request"]
+    if request.path == target:
+        if "class" in attrs:
+            attrs["class"] += ' ' + 'current_link'
+        else:
+            attrs["class"] = 'current_link'
+        tag = "span"
+    else:
+        attrs["href"] = target
+        tag = "a"
+    return mark_safe("<{tag} {attrs}>{text}</{tag}>".format(
+        tag=tag,
+        attrs=make_attrs(attrs),
+        text=text
+    ))
