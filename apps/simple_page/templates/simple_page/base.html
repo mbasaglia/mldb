@@ -1,0 +1,179 @@
+{% comment %}
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+{% endcomment %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ site_name }} | {{ title }}</title>
+    <style>
+
+body {
+    background-color: white;
+    color: black;
+    font-family: serif;
+}
+
+main {
+    margin: 1em;
+}
+
+h1 {
+    border-bottom: 1px solid black;
+    padding: 0 0 0 1ex;
+}
+
+.section a:active, .section a:visited, .section a:link, .section a:hover {
+    color: black;
+    text-decoration: none;
+}
+
+.section a:hover:after {
+    content: "¶";
+}
+
+
+section {
+    border-bottom: 1px dotted gray;
+    padding: 1em;
+}
+
+h2 {
+    margin: 0;
+}
+
+h3 {
+    margin: 1ex 0;
+}
+
+p {
+    margin: 0.5ex;
+}
+
+blockquote {
+    background-color: #f8f4f0;
+    border-radius: 5px;
+    display: inline-block;
+    font-style: oblique;
+    margin: 0.5em 0.5em 0.5em 2em;
+    padding: 0.5em;
+}
+blockquote::before {
+    color: gray;
+    content: "“";
+    font-size: xx-large;
+}
+
+blockquote::after {
+    color: gray;
+    content: "„";
+    font-size: xx-large;
+}
+
+.note {
+    background-color: #cdf;
+    border: 1px solid #abd;
+    border-radius: 5px;
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
+    display: inline-block;
+    margin: 0.5em;
+    padding: 0.5em;
+}
+
+.dtable th::after {
+    content: "―";
+    padding: 0 1ex;
+}
+.dtable th {
+    text-align: right;
+}
+
+
+footer {
+    background-color: #57c;
+    color: #ffc;
+    display: flex;
+    flex-wrap: wrap;
+    font-family: sans-serif;
+    justify-content: center;
+    padding: 1ex;
+}
+footer > nav {
+    margin: 1ex;
+}
+.footer_title {
+    font-weight: bold;
+    text-align: center;
+}
+footer nav li {
+    list-style: outside none none;
+}
+footer nav ul {
+    margin: 1ex 0 0;
+    padding: 0;
+}
+footer a:link, footer a:active, footer a:visited, footer a:active {
+    color: #ffc;
+    text-decoration: none;
+}
+footer a:hover {
+    text-decoration: underline;
+}
+    </style>
+    {% include head %}
+</head>
+<body>
+
+{% if menu %}
+    <nav class="menu"><ul>
+        {% for item in menu %}
+            {% if current_page and current_page == item.url %}
+                <li><span class="current">{{ item.text }}</span></li>
+                <li><a href="{{ item.url }}">{{ item.text }}</a></li>
+            {% endif %}
+        {% endfor %}
+    </ul></nav>
+{% endif %}
+
+{% if breadcrubs %}
+    <nav class="breadcrubs"><ul>
+        {% for crumb in breadcrumbs %}
+            <li><a href="{{ crumb.url }}">{{ crumb.text }}</a></li>
+        {% endfor %}
+        <li class="current_crumb">{{ title }}</li>
+    </ul></nav>
+{% endif %}
+
+<header><h1>{{ title }}</h1></header>
+
+<main id="contents">
+    {% include contents %}
+</main>
+
+{% if footer %}
+<footer>
+    {% for section in footer %}
+        <nav>
+            <div class="footer_title">{{ section.title }}</div>
+            <ul>
+                {% for link in section.links %}
+                    <li><a href="{{ link.url }}">{{ link.text }}</a></li>
+                {% endfor %}
+            </ul>
+        </nav>
+    {% endfor %}
+</footer>
+{% endif %}
+
+</body>
+</html>
