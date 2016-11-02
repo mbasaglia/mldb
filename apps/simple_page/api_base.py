@@ -204,6 +204,3 @@ class ApiBase(object):
         """
         response_type = self.response_types.get(type, self.default_response)
         return response_type.error(404, "%s not found" % name)
-
-
-
