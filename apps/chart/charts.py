@@ -23,6 +23,7 @@ from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from ..simple_page.templatetags.simple_page import make_attrs
 
+
 class DataPoint(object):
     """
     A data point in the graph

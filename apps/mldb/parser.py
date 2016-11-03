@@ -58,7 +58,6 @@ def load_lines(filename, episode):
     with open(filename) as file:
         order = 0
         for names, text in lines(file):
-            print "\n".join("%s: %s" % (n, models.Character.name_to_slug(n)) for n in names)
             line_objects.append((
                 models.Line(episode=episode, order=order, text=text),
                 [

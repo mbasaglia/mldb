@@ -21,6 +21,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     <svg xmlns="http://www.w3.org/2000/svg"
         width="400" height="200"
         viewBox="-4 -4 408 208">
+        <style>
+            .character_{{ character.slug }} {
+                fill: {{ character.color }};
+                stroke: {{ character.outline }};
+                stroke-width: 2px;
+            }
+            path.character_{{ character.slug }} {
+                fill: none;
+            }
+        </style>
         {% line_chart_grid episode_data|length "400" "200" class="grid" %}
         {% line_chart episode_data "400" "200" "4" class_prefix="character_" %}
     </svg>

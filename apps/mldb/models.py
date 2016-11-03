@@ -21,7 +21,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import re
 import urllib
 from django.db import models
+from django.core.validators import RegexValidator
 from unidecode import unidecode_expect_ascii as unidecode
+import colorsys
 
 
 class Episode(models.Model):
@@ -73,9 +75,19 @@ class Episode(models.Model):
         return "%s %s" % (self.formatted_id, self.title)
 
 
+def ColorField(*args, **kwargs):
+    return models.CharField(
+        max_length=7,
+        validators=[RegexValidator("#[0-9a-fA-F]{6}")],
+        *args, **kwargs
+    )
+
+
 class Character(models.Model):
     name = models.CharField(max_length=128, db_index=True, blank=False)
     slug = models.CharField(max_length=128, unique=True, blank=False)
+    color = ColorField(default='#ffffff')
+    outline = ColorField(default='#cccccc')
 
     @staticmethod
     def name_to_slug(name):

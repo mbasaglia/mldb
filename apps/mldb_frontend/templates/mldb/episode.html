@@ -23,7 +23,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     <figcaption>Character Lines</figcaption>
     <svg xmlns="http://www.w3.org/2000/svg"
         width="200" height="200"
-        viewBox="0 0 100 100">
+        viewBox="-1 -1 102 102">
+        <style>
+        {% for character in characters %}
+            path.character_{{ character.slug }} {
+                fill: {{ character.color }};
+                stroke: {{ character.outline }};
+            }
+            path.character_other {
+                fill: silver;
+                stroke: gray;
+            }
+        {% endfor %}
+        </style>
         {% pie_chart character_data "50" class_prefix="character_" %}
     </svg>
 </figure>
