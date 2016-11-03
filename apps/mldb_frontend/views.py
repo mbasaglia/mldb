@@ -96,8 +96,10 @@ def characters(request):
     """
     Full list of characters
     """
+    characters = annotate_characters(models.Character.objects)
     ctx = {
-        "characters": annotate_characters(models.Character.objects)
+        "characters": characters,
+        "character_data": character_data(characters),
     }
     page = MldbPage("Characters", "mldb/character_list.html")
     return page.render(request, ctx)
@@ -141,16 +143,36 @@ def season(request, season):
     List of episodes in the given season
     """
     season = int(season)
+    characters =  annotate_characters(
+        models.Character.objects
+        .filter(line__episode__gt=100, line__episode__lt=202)
+    ).distinct()
     ctx = {
         "season": "%02i" % season,
         "episodes": season_episodes(season),
-        "characters": annotate_characters(
-            models.Character.objects
-            .filter(line__episode__gt=100, line__episode__lt=202)
-        ).distinct()
+        "characters": characters,
+        "character_data": character_data(characters),
     }
     page = MldbPage("Season %s" % season, "mldb/season.html")
     return page.render(request, ctx)
+
+
+def character_data(queryset, cutoff=10):
+    """
+    Retrieves the chart dataset from the queryset
+    """
+    character_data = charts.DataSet(
+        charts.DataPoint(ch.name, ch.slug, ch.n_lines)
+        for ch in queryset[0:cutoff]
+    )
+
+    if queryset.count() > cutoff:
+        character_data.append(charts.DataPoint(
+            "Other", "other",
+            queryset[cutoff:].aggregate(Sum("n_lines"))["n_lines__sum"]
+        ))
+
+    return character_data
 
 
 def episode(request, season, number):
@@ -168,24 +190,13 @@ def episode(request, season, number):
         models.Character.objects.filter(line__episode=episode)
     ).distinct()
 
-    character_data = charts.DataSet(
-        charts.DataPoint(ch.name, ch.slug, ch.n_lines)
-        for ch in characters[0:10]
-    )
-
-    if len(characters) > 10:
-        character_data.append(charts.DataPoint(
-            "Other", "other",
-            characters[10:].aggregate(Sum("n_lines"))["n_lines__sum"]
-        ))
-
     ctx = {
         "episode": episode,
         "characters": characters,
         "lines": models.Line.objects
             .filter(episode=episode)
             .order_by("order"),
-        "character_data": character_data
+        "character_data": character_data(characters)
     }
     page = MldbPage(episode.title, "mldb/episode.html")
     return page.render(request, ctx)

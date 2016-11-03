@@ -37,7 +37,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 <section>
 <header>{% section h2 %}Episodes{% endsection %}</header>
 {% for season in seasons %}
-    {% section h3 %}Season {{ season.number }}{% endsection %}</header>
+    <h3><a href="{% url "season" season=season.number %}">Season {{ season.number }}</a></h3>
     <ol>
     {% for episode in season.episodes %}
         <li><a
