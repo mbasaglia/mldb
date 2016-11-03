@@ -27,25 +27,47 @@ class Command(BaseCommand):
 
     def add_arguments(self, argparser):
         argparser.add_argument('--list', '-l', action="store_true", help="List avaliable files")
+        argparser.add_argument('--grep', '-g', action="store_true", 
+            help="Grep mode, when present --file is an approximatation")
         argparser.add_argument('--file', '-f', help="File path")
         argparser.add_argument('--season', '-s', help="Season number", type=int)
         argparser.add_argument('--episode', '-e', help="Episode number", type=int)
 
+    def file_names(self):
+        return os.listdir(parser.pony_lines_raw)
+
+    def disambiguate(self, prompt):
+        files = self.file_names()
+        while True:
+            files = filter(lambda name: prompt in name, files)
+            print "\n".join(files)
+            print ""
+            if len(files) > 1:
+                prompt = raw_input()
+            elif len(files) == 1:
+                print "Loading..."
+                return files[0]
+            else:
+                raise CommandError("No match")
+
     def handle(self, *args, **options):
         if options["list"]:
-            print "\n".join(os.listdir(parser.pony_lines_raw))
+            print "\n".join(self.file_names())
             return
         elif options["file"]:
+            filename = options["file"]
+            if options["grep"]:
+                filename = self.disambiguate(filename)
+
             if "season" not in options:
                 raise CommandError("Missing season (-s)")
             if "episode" not in options:
                 raise CommandError("Missing episode number (-e)")
+
             parser.load_episode(
-                os.path.join(parser.pony_lines_raw, options["file"]),
+                os.path.join(parser.pony_lines_raw, filename),
                 options["season"],
                 options["episode"]
             )
         else:
             raise  CommandError("Nothing to do")
-
-
