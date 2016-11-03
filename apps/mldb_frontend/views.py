@@ -54,7 +54,7 @@ def annotate_characters(character_queryset):
         character_queryset
         .annotate(n_lines=Count("line"),
                   episodes=Count("line__episode", distinct=True))
-        .order_by("-episodes", "-n_lines", "name")
+        .order_by("-n_lines", "-episodes", "name")
     )
 
 
