@@ -80,7 +80,7 @@ class Character(models.Model):
     @staticmethod
     def name_to_slug(name):
         return re.sub(
-            "[^a-zA-Z0-0_]",
+            "[^a-zA-Z0-9_]",
             "",
             unidecode(name.decode("utf8")).lower().replace(" ", "_")
         )
