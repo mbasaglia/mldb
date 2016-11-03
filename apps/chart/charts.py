@@ -47,11 +47,13 @@ class DataSet(object):
     """
     A list of data points
     """
-    def __init__(self, points):
+    def __init__(self, points, label="", id=""):
         self._data = list(points)
         self.total = 0
         for point in self._data:
             self._on_add(point)
+        self.label = label
+        self.id = id
 
     def _on_add(self, point):
         self.total += point.value
@@ -87,7 +89,7 @@ class PieChart(object):
     """
     Pie chart
     """
-    def __init__(self,  radius,  center=None, angle_start=0):
+    def __init__(self, radius, center=None, angle_start=0):
         """
         \param center        A SvgPoint
         \param radius        Radius of the chart (in svg user units)
@@ -127,6 +129,9 @@ class PieChart(object):
             title
         ))
 
+    def format_title(self, point):
+        return "%s (%s, %.2g%%)" % (point.label, point.value, point.percent * 100)
+
     def render(self, data, id_prefix="pie_slice_", class_prefix="pie_slice_"):
         """
         Renders the given data as SVG paths
@@ -144,7 +149,119 @@ class PieChart(object):
                 "data-value": point.value,
                 "data-name": point.label,
             }
-            title = "%s (%s, %.2g%%)" % (point.label, point.value, point.percent * 100)
-            slices += self.render_slice(angle, angle_delta, attrs, title) + "\n"
+            slices += self.render_slice(angle, angle_delta, attrs,
+                                        self.format_title(point)) + "\n"
             angle += angle_delta
         return mark_safe(slices)
+
+
+class SvgRect(object):
+    def __init__(self, x=0, y=0, width=0, height=0):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+
+    @property
+    def top_left(self):
+        return SvgPoint(self.x, self.y)
+
+    @property
+    def top_right(self):
+        return SvgPoint(self.x + self.width, self.y)
+
+    @property
+    def bottom_right(self):
+        return SvgPoint(self.x + self.width, self.y + self.height)
+
+    @property
+    def bottom_left(self):
+        return SvgPoint(self.x, self.y + self.height)
+
+
+class LineChart(object):
+    default_prefix = "line_chart_"
+
+    def __init__(self, rect):
+        self.rect = rect
+
+    def relpoint(self, percent_x, percent_y):
+        return SvgPoint(
+            self.rect.x + self.rect.width * percent_x,
+            self.rect.y + self.rect.height * (1 - percent_y),
+        )
+
+    def points(self, data):
+        return [
+            self.relpoint(self._rel_x(index, len(data)), data_point.percent)
+            for index, data_point in enumerate(data)
+        ]
+
+    def _rel_x(self, index, size):
+        return 0 if size < 2 else float(index) / (size - 1)
+
+    def render_line(self, data, attrs, id_prefix=default_prefix,
+                    class_prefix=default_prefix):
+        points = self.points(data)
+        if points:
+            attrs["d"] = "M " + str(points[0]) \
+                       + " L " + " ".join(map(str, points[1:]))
+        if data.id:
+            attrs["id"] = id_prefix + data.id
+            attrs["class"] = class_prefix + data.id
+
+        return mark_safe(
+            "<path %s>"
+            "<title>%s</title>"
+            "</path>" % (
+            make_attrs(attrs),
+            data.label
+        ))
+
+    def format_title(self, point):
+        return "%s (%s)" % (point.label, point.value)
+
+    def _circlepoint(self, index, data, percent):
+
+        point = self.relpoint(
+            self._rel_x(index, len(data)),
+            percent
+        )
+        return "cx='%s' cy='%s'" % (point.x, point.y)
+
+    def render_points(self, data, attrs, class_prefix=default_prefix):
+        if data.id:
+            attrs["class"] = class_prefix + data.id
+        attrstring = make_attrs(attrs)
+        return mark_safe("\n".join(
+            "<circle %s data-value='%s' data-name='%s' %s>"
+            "<title>%s</title>"
+            "</circle>" % (
+                self._circlepoint(index, data, point.percent),
+                point.value,
+                point.label,
+                attrstring,
+                point.label,
+            )
+            for index, point in enumerate(data)
+        ))
+
+    def render_hgrid(self, steps, attrs):
+        attrs["d"] = " ".join(
+            "M %s L %s" % (
+                self.relpoint(self._rel_x(i, steps), 0),
+                self.relpoint(self._rel_x(i, steps), 1),
+            )
+            for i in range(steps)
+        )
+        return mark_safe(
+            "<path %s/>" % (
+            make_attrs(attrs),
+        ))
+
+    def render(self, data, point_radius=0, id_prefix=default_prefix,
+               class_prefix=default_prefix):
+        return mark_safe(
+            self.render_line(data, {}, id_prefix, class_prefix) +
+            self.render_points(data, {"r": point_radius}, class_prefix)
+        )

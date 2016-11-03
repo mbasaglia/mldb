@@ -26,5 +26,17 @@ from .. import charts
 register = template.Library()
 
 @register.simple_tag
-def pie_chart(data, radius, id_prefix="pie_chart_", class_prefix="pie_chart_"):
-    return charts.PieChart(float(radius)).render(data, id_prefix, class_prefix)
+def pie_chart(data, radius, *args, **kwargs):
+    return charts.PieChart(float(radius)).render(data, *args, **kwargs)
+
+
+@register.simple_tag
+def line_chart(data, width, height, *args, **kwargs):
+    rect = charts.SvgRect(0, 0, float(width), float(height))
+    return charts.LineChart(rect).render(data, *args, **kwargs)
+
+
+@register.simple_tag
+def line_chart_grid(steps, width, height, **attrs):
+    rect = charts.SvgRect(0, 0, float(width), float(height))
+    return charts.LineChart(rect).render_hgrid(steps, attrs)

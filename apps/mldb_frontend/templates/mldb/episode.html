@@ -29,7 +29,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 </figure>
 <ul>
 {% for character in characters %}
-    <li>
+    <li class="character_{{ character.slug }}">
         <a href='{% url "character" name=character.name %}'>{{ character.name }}</a>
         ({{ character.n_lines }} line{{ character.n_lines|pluralize }})
     </li>

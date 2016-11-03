@@ -108,17 +108,29 @@ def character(request, name):
     Character details
     """
     character = get_object_or_404(models.Character, name=name)
-    episodes = (
-        models.Episode.objects
-        .filter(line__characters__in=[character])
-        .annotate(n_lines=Count('id'))
-        .order_by("id")
-        .distinct()
+    episodes = models.Episode.objects.order_by("id")
+    episode_data = charts.DataSet(
+        (
+            charts.DataPoint(
+                ep.title,
+                ep.slug,
+                ep.line_set.filter(characters__in=[character]).count()
+            )
+            for ep in episodes
+        ),
+        name,
+        character.slug
     )
+    episodes = episodes \
+        .filter(line__characters__in=[character]) \
+        .annotate(n_lines=Count('id')) \
+        .distinct()
+
     ctx = {
         "character": character,
         "episodes": episodes,
-        "line_count": sum(episodes.values_list("n_lines", flat=True))
+        "line_count": sum(episodes.values_list("n_lines", flat=True)),
+        "episode_data": episode_data,
     }
     page = MldbPage(character.name, "mldb/character.html")
     return page.render(request, ctx)
