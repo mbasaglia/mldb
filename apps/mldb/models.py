@@ -100,7 +100,3 @@ class Line(models.Model):
 
     def __unicode__(self):
         return self.text
-
-    @property
-    def character_slugs(self):
-        return self.characters.values_list("slug", flat=True)

@@ -15,9 +15,18 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 {% endcomment %}
 {% load simple_page %}
+{% load charts %}
 
 <section>
 <header>{% section h2 %}Characters{% endsection %}</header>
+<figure>
+    <figcaption>Character Lines</figcaption>
+    <svg xmlns="http://www.w3.org/2000/svg"
+        width="200" height="200"
+        viewBox="0 0 100 100">
+        {% pie_chart character_data "50" class_prefix="character_" %}
+    </svg>
+</figure>
 <ul>
 {% for character in characters %}
     <li>
@@ -32,7 +41,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 <header>{% section h2 %}Transcript{% endsection %}</header>
 <div class="transcript">
 {% for line in lines %}
-    <p id="line-{{line.order}}" class='{{ line.character_slugs|join:" " }}'>{{ line.text }}</p>
+    <p id="line-{{line.order}}" class='{% flatten_list line.characters.all " " "character_{0.slug}" %}'>{{ line.text }}</p>
 {% endfor %}
 </div>
 </section>

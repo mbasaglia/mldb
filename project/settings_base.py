@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     "apps.mldb",
     "apps.mldb_frontend",
     "apps.simple_page",
+    "apps.chart",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",

@@ -20,10 +20,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
-from django.db.models import Count
+from django.db.models import Count, Sum
 
 from ..simple_page.page import Page, LinkGroup, Link
 from ..mldb import models
+from ..chart import charts
 
 
 class MldbPage(Page):
@@ -150,15 +151,27 @@ def episode(request, season, number):
         models.Episode,
         id=models.Episode.make_id(season, number)
     )
+
+    characters =  annotate_characters(
+        models.Character.objects.filter(line__episode=episode)
+    ).distinct()
+
+    character_data = charts.DataSet(
+        charts.DataPoint(ch.name, ch.slug, ch.n_lines)
+        for ch in characters[0:10]
+    )
+    character_data.append(charts.DataPoint(
+        "Other", "other",
+        characters[10:].aggregate(Sum("n_lines"))["n_lines__sum"]
+    ))
+
     ctx = {
         "episode": episode,
-        "characters": models.Character.objects
-            .filter(line__episode=episode)
-            .annotate(n_lines=Count("line"))
-            .order_by("-n_lines", "name"),
+        "characters": characters,
         "lines": models.Line.objects
             .filter(episode=episode)
-            .order_by("order")
+            .order_by("order"),
+        "character_data": character_data
     }
     page = MldbPage(episode.title, "mldb/episode.html")
     return page.render(request, ctx)

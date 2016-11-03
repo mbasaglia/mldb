@@ -145,3 +145,8 @@ def link(context, target, text=None, **attrs):
         attrs=make_attrs(attrs),
         text=text
     ))
+
+
+@register.simple_tag
+def flatten_list(list, join=" ", template="{}"):
+    return join.join(template.format(item) for item in list)
