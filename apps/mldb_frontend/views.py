@@ -172,10 +172,12 @@ def episode(request, season, number):
         charts.DataPoint(ch.name, ch.slug, ch.n_lines)
         for ch in characters[0:10]
     )
-    character_data.append(charts.DataPoint(
-        "Other", "other",
-        characters[10:].aggregate(Sum("n_lines"))["n_lines__sum"]
-    ))
+
+    if len(characters) > 10:
+        character_data.append(charts.DataPoint(
+            "Other", "other",
+            characters[10:].aggregate(Sum("n_lines"))["n_lines__sum"]
+        ))
 
     ctx = {
         "episode": episode,
