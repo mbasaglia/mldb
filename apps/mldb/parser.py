@@ -54,23 +54,26 @@ def load_lines(filename, episode):
     """
     Loads all lines from a file relating to an episode
     """
+    line_objects = []
     with open(filename) as file:
         order = 0
         for names, text in lines(file):
-            line = models.Line(
-                episode=episode,
-                order=order,
-                text=text,
-            )
-            line.save()
-
-            for name in names:
-                line.characters.add(
+            print "\n".join("%s: %s" % (n, models.Character.name_to_slug(n)) for n in names)
+            line_objects.append((
+                models.Line(episode=episode, order=order, text=text),
+                [
                     models.Character.objects.get_or_create(
                         name=name,
                         defaults={
                             "slug": models.Character.name_to_slug(name),
                         }
                     )[0]
-                )
+                    for name in names
+                ]
+            ))
             order += 1
+
+    models.Line.objects.bulk_create([obj[0] for obj in line_objects])
+    new_lines = models.Line.objects.filter(episode=episode).order_by("order")
+    for obj in line_objects:
+        new_lines[obj[0].order].characters.add(*obj[1])
