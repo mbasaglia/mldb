@@ -41,7 +41,17 @@ class DataPoint(object):
 
     @property
     def percent(self):
+        """
+        Percentage of the total
+        """
         return float(self.value) / self.dataset.total
+
+    @property
+    def normalized(self):
+        """
+        Percentage of the maximum
+        """
+        return float(self.value) / self.dataset.max if self.dataset.max else 1
 
 
 class DataSet(object):
@@ -51,12 +61,15 @@ class DataSet(object):
     def __init__(self, points, label="", id=""):
         self._data = list(points)
         self.total = 0
+        self.max = 0
         for point in self._data:
             self._on_add(point)
         self.label = label
         self.id = id
 
     def _on_add(self, point):
+        if point.value > self.max:
+            self.max = point.value
         self.total += point.value
         point.dataset = self
 
@@ -194,7 +207,7 @@ class LineChart(object):
 
     def points(self, data):
         return [
-            self.relpoint(self._rel_x(index, len(data)), data_point.percent)
+            self.relpoint(self._rel_x(index, len(data)), data_point.normalized)
             for index, data_point in enumerate(data)
         ]
 
@@ -238,11 +251,11 @@ class LineChart(object):
             "<circle %s data-value='%s' data-name='%s' %s>"
             "<title>%s</title>"
             "</circle>" % (
-                self._circlepoint(index, data, point.percent),
+                self._circlepoint(index, data, point.normalized),
                 point.value,
                 point.label,
                 attrstring,
-                point.label,
+                self.format_title(point),
             )
             for index, point in enumerate(data)
         ))
