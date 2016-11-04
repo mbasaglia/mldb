@@ -15,6 +15,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 {% endcomment %}
 {% load simple_page %}
+{% load mldb %}
 
 <section>
 <header>{% section h2 %}{{ page.site_name }}{% endsection %}</header>
@@ -27,8 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     who spoke a total of {{ n_lines }} line{{ n_lines|pluralize }}
     across {{ n_episodes }} episode{{ n_episodes|pluralize }}.</p>
 {% if best %}
-    <p>The most talkative character is
-    <a href="{% url "character" name=best.name %}">{{ best.name }}</a>,
+    <p>The most talkative character is {% character_link best %},
     who spoke {{ best.n_lines }} line{{ best.n_lines|pluralize }} and
     appeared in {{ best.episodes }} episode{{ episodes|pluralize }}.</p>
 {% endif %}

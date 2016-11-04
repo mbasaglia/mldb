@@ -16,6 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 {% endcomment %}
 {% load simple_page %}
 {% load charts %}
+{% load mldb %}
 
 <section>
 <header>{% section h2 %}Characters{% endsection %}</header>
@@ -26,9 +27,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 <section>
 <header>{% section h2 %}Transcript{% endsection %}</header>
-<div class="transcript">
+<table class="transcript">
 {% for line in lines %}
-    <p id="line-{{line.order}}" class='{% flatten_list line.characters.all " " "character_{0.slug}" %}'>{{ line.text }}</p>
+    <tr id="line-{{line.order}}">
+        <td><ul>
+            {% for character in line.characters.all %}
+                <li>{% character_link character %}</li>
+            {% endfor %}
+        </ul></td>
+        <td class='{% flatten_list line.characters.all " " "character_{0.slug}" %}'>{{ line.text }}</td>
+    </tr>
 {% endfor %}
-</div>
+</table>
 </section>

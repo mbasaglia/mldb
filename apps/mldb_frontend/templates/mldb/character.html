@@ -15,6 +15,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 {% endcomment %}
 {% load charts %}
+{% load mldb %}
 
 <figure>
     <figcaption>Character Lines</figcaption>
@@ -44,7 +45,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 <ul>
 {% for episode in episodes %}
     <li>
-        <a href='{% url "episode" season=episode.season number=episode.number %}'>{{ episode.title }}</a>
+        <a href='{% episode_url episode %}'>{{ episode.title }}</a>
         (<a href='{% url "search" %}?episode={{ episode.formatted_id }}&amp;character={{ character.name }}'
             >{{ episode.n_lines }} line{{ episode.n_lines|pluralize }}</a>)
     </li>

@@ -249,12 +249,12 @@ def episode(request, season, number):
         "characters": characters,
         "lines": models.Line.objects
             .filter(episode=episode)
+            .prefetch_related("characters")
             .order_by("order"),
         "character_lines_data": character_lines_data(characters)
     }
     page = MldbPage(episode.title, "mldb/episode.html")
     return page.render(request, ctx)
-
 
 
 def search(request):
@@ -278,7 +278,8 @@ def search(request):
             results = results.filter(text__contains=form.cleaned_data["query"])
             pages = int(math.ceil(float(results.count()) / max_results))
             start = max_results * curpage
-            results = results[start:start + max_results]
+            results = results[start:start + max_results] \
+                .prefetch_related("episode")
     else:
         form = forms.SearchForm()
 
