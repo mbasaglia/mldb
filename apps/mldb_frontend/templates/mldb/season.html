@@ -55,12 +55,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                 stroke-dasharray: 2, 5;
             }
         </style>
-        {% line_chart_grid character_trends.0|length "400" "200" class="grid" %}
-        {% for data_set in character_trends %}
-            <g class="line_data">
-                {% line_chart data_set "400" "200" "4" class_prefix="character_" %}
-            </g>
-        {% endfor %}
+        {% line_chart character_trends "400" "200" "4" class_prefix="character_" %}
     </svg>
 </figure>
 <figure>

@@ -37,12 +37,6 @@ def line_chart(data, width, height, *args, **kwargs):
 
 
 @register.simple_tag
-def line_chart_grid(steps, width, height, **attrs):
-    rect = charts.SvgRect(0, 0, float(width), float(height))
-    return charts.LineChart(rect).render_hgrid(steps, attrs)
-
-
-@register.simple_tag
 def stacked_bar_chart(dataset_list, width, height, separation=1, *args, **kwargs):
     rect = charts.SvgRect(0, 0, float(width), float(height))
     return charts.StackedBarChart(rect, separation).render(dataset_list, *args, **kwargs)

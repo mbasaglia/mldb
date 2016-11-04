@@ -356,12 +356,43 @@ class LineChart(object):
             make_attrs(attrs),
         ))
 
-    def render(self, data, point_radius=0, id_prefix=default_prefix,
-               class_prefix=default_prefix):
-        return mark_safe(
-            self.render_line(data, {}, id_prefix, class_prefix) +
-            self.render_points(data, {"r": point_radius}, class_prefix)
-        )
+    def render_data_trace(
+        self,
+        data_set,
+        point_radius=0,
+        id_prefix=default_prefix,
+        class_prefix=default_prefix,
+        attrs={}
+    ):
+        return mark_safe("<g %s>%s%s</g>" % (
+            make_attrs(attrs),
+            self.render_line(data_set, {}, id_prefix, class_prefix),
+            self.render_points(data_set, {"r": point_radius}, class_prefix),
+        ))
+
+    def render(
+        self,
+        data_set_list,
+        point_radius=0,
+        grid_class="grid",
+        trace_class="line_data",
+        id_prefix=default_prefix,
+        class_prefix=default_prefix
+    ):
+        if isinstance(data_set_list, DataSet):
+            data_set_list = [data_set_list]
+
+        size = len(data_set_list[0]) if data_set_list else 1
+        svg = self.render_hgrid(size, {"class": grid_class})
+        for data_set in data_set_list:
+            svg += self.render_data_trace(
+                data_set,
+                point_radius,
+                id_prefix,
+                class_prefix,
+                {"class": trace_class}
+            )
+        return mark_safe(svg)
 
 
 class StackedBarChart(object):
@@ -421,9 +452,8 @@ class StackedBarChart(object):
             y += rect.height
         return mark_safe("<g>%s</g>\n" % items)
 
-
     def _subrect(self, index, size):
-        if size < 2:
+        if size == 0:
             return self.rect
         width = float(1) / (size + size * self.separation)
         gap_with = width * self.separation
@@ -435,6 +465,8 @@ class StackedBarChart(object):
         )
 
     def render(self, data_set_list, class_prefix=default_prefix):
+        if isinstance(data_set_list, DataSet):
+            data_set_list = [data_set_list]
         bars = ""
         for index, data_set in enumerate(data_set_list):
             subrect = self._subrect(index, len(data_set_list))
