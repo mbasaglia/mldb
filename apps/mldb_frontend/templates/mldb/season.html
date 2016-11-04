@@ -38,7 +38,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         class="line_chart">
         <style>
             {% for data_set in character_trends %}
-                .line_chart .character_{{ data_set.id }} {
+                .character_{{ data_set.id }} {
                     fill: {{ data_set.extra.color }};
                     stroke: {{ data_set.extra.outline }};
                 }
@@ -61,6 +61,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                 {% line_chart data_set "400" "200" "4" class_prefix="character_" %}
             </g>
         {% endfor %}
+    </svg>
+</figure>
+<figure>
+    <figcaption>Characters Per Episode</figcaption>
+    <svg xmlns="http://www.w3.org/2000/svg"
+        width="400" height="200"
+        viewBox="-1 -1 202 102"
+        class="stacked_chart">
+        {% stacked_bar_chart episode_trends "200" "100" class_prefix="character_" %}
     </svg>
 </figure>
 {% include "mldb/character_list.html" %}

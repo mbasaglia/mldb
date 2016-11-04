@@ -362,3 +362,81 @@ class LineChart(object):
             self.render_line(data, {}, id_prefix, class_prefix) +
             self.render_points(data, {"r": point_radius}, class_prefix)
         )
+
+
+class StackedBarChart(object):
+    default_prefix = "stacked_bar_chart_"
+
+    def __init__(self, rect, separation=1):
+        self.rect = rect
+        self.separation = separation
+
+    def format_title(self, point):
+        return "%s (%s, %.2g%%)" % (point.label, point.value, point.percent * 100)
+
+    def render_bar_item(self, rect, attrs, title):
+        """
+        \brief Creates a SVG rect element for a bar item
+        \param rect         Rectangle to render in size percentages
+        \param attrs        Extra attributes for the SVG element
+        \param title        Value title
+        \returns A string with the SVG path element
+        """
+        height = rect.height * self.rect.height
+        return mark_safe(
+            "<rect x='%s' y='%s' width='%s' height='%s' %s>"
+            "<title>%s</title>"
+            "</rect>" % (
+            self.rect.x + rect.x * self.rect.width,
+            self.rect.y + self.rect.height - rect.y * self.rect.height - height,
+            rect.width * self.rect.width,
+            height,
+            make_attrs(attrs),
+            title
+        ))
+
+    def render_bar(self, data_set, sub_rect=None, class_prefix=default_prefix):
+        """
+        Renders a stacked bar for the given data as SVG paths
+        \param data         A DataSet object
+        \param class_prefix Prefix to the path css classes"
+        """
+        items = ""
+        y = sub_rect.y
+        if not sub_rect:
+            sub_rect = self.rect
+        for point in data_set:
+            rect = SvgRect(
+                x=sub_rect.x,
+                y=y,
+                width=sub_rect.width,
+                height=point.percent * sub_rect.height
+            )
+            attrs = {
+                "class": class_prefix + point.id,
+                "data-value": point.value,
+                "data-name": point.label,
+            }
+            items += self.render_bar_item(rect, attrs, self.format_title(point)) + "\n"
+            y += rect.height
+        return mark_safe("<g>%s</g>\n" % items)
+
+
+    def _subrect(self, index, size):
+        if size < 2:
+            return self.rect
+        width = float(1) / (size + size * self.separation)
+        gap_with = width * self.separation
+        return SvgRect(
+            x=gap_with / 2 + (gap_with + width) * index,
+            y=0,
+            width=width,
+            height=1
+        )
+
+    def render(self, data_set_list, class_prefix=default_prefix):
+        bars = ""
+        for index, data_set in enumerate(data_set_list):
+            subrect = self._subrect(index, len(data_set_list))
+            bars += self.render_bar(data_set, subrect, class_prefix)
+        return mark_safe(bars)
