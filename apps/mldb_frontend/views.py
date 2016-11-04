@@ -32,6 +32,12 @@ class MldbPage(Page):
     Page with site-specific defaults
     """
     site_name = "mldb"
+    menu = LinkGroup(site_name, [
+        Link(reverse_lazy("home"), "Home"),
+        Link(reverse_lazy("characters"), "Characters"),
+        Link(reverse_lazy("episodes"), "Episodes"),
+        Link(reverse_lazy("search"), "Search"),
+    ])
     footer = [
         LinkGroup(site_name, [
             Link(reverse_lazy("home"), "Home"),
@@ -42,6 +48,9 @@ class MldbPage(Page):
             Link(reverse_lazy("api:explore"), "Explore"),
         ]),
         LinkGroup("Sources", [
+            Link("https://github.com/mbasaglia/mldb", "MLDB"),
+            Link("https://github.com/mbasaglia/Pony-Lines", "Pony-Lines"),
+            Link("http://mlp.wikia.com/wiki/My_Little_Pony_Friendship_is_Magic_Wiki", "MLP Wiki"),
         ]),
     ]
 
@@ -69,27 +78,50 @@ def season_episodes(season):
     )
 
 
+def seasons_context():
+    """
+    Returns a list that can be used in a render context to display all episodes
+    divided by season
+    """
+    latest_episode = models.Episode.objects.latest("id")
+    latest_season = latest_episode.season if latest_episode else 0
+    return [
+        {
+            "number": season,
+            "episodes": season_episodes(season),
+        }
+        for season in range(1, latest_season + 1)
+    ]
+
+
 def home(request):
+    """
+    Homepage view
+    """
+    ctx = {
+        "n_characters": models.Character.objects.count(),
+        "n_lines": models.Line.objects.count(),
+        "n_episodes": models.Episode.objects.count(),
+        "best":  annotate_characters(models.Character.objects).first(),
+        "seasons": seasons_context(),
+    }
+    page = MldbPage("Home", "mldb/home.html")
+    return page.render(request, ctx)
+
+
+
+def episodes(request):
     """
     Homepage view
     """
     latest_episode = models.Episode.objects.latest("id")
     latest_season = latest_episode.season if latest_episode else 0
     ctx = {
-        "n_characters": models.Character.objects.count(),
-        "n_lines": models.Line.objects.count(),
-        "n_episodes": models.Episode.objects.count(),
-        "best":  annotate_characters(models.Character.objects).first(),
-        "seasons": [
-            {
-                "number": season,
-                "episodes": season_episodes(season),
-            }
-            for season in range(1, latest_season + 1)
-        ],
+        "seasons": seasons_context(),
     }
-    page = MldbPage("Home", "mldb/home.html")
+    page = MldbPage("Home", "mldb/episode_list.html")
     return page.render(request, ctx)
+
 
 
 def characters(request):

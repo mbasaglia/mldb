@@ -130,3 +130,57 @@ footer a:hover {
 .current_link {
     color: #ccc;
 }
+
+
+.menu
+{
+    color: yellow;
+    font-size: small;
+}
+
+.menu ul:first-child
+{
+    border-top-left-radius: 1ex;
+    border-top-right-radius: 1ex;
+    background-color: #666;
+}
+
+.menu ul:last-child
+{
+    border-bottom-left-radius: 1ex;
+    border-bottom-right-radius: 1ex;
+}
+
+.menu ul
+{
+    list-style: none;
+    margin: 0;
+    padding: 0 2ex;
+    display: flex;
+}
+.menu li
+{
+    display: inline-flex;
+}
+.menu li > a, .menu li > span
+{
+    padding: 1ex;
+}
+.menu a, .menu a:hover, .menu a:link, .menu a:visited
+{
+    color: inherit;
+    text-decoration: none;
+}
+.menu a:hover
+{
+    background-color: #aaa;
+}
+.menu span.current_link
+{
+    font-weight: bold;
+}
+.menu .current_link
+{
+    background-color: #888;
+    color: inherit;
+}

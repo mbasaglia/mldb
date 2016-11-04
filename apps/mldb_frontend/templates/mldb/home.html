@@ -36,14 +36,5 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 <section>
 <header>{% section h2 %}Episodes{% endsection %}</header>
-{% for season in seasons %}
-    <h3><a href="{% url "season" season=season.number %}">Season {{ season.number }}</a></h3>
-    <ol>
-    {% for episode in season.episodes %}
-        <li><a
-            href="{% url "episode" season=season.number number=episode.number %}"
-        >{{ episode.title }}</a></li>
-    {% endfor %}
-    </ol>
-{% endfor %}
+{% include "mldb/episode_list.html" %}
 </section>
