@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
-from django.db.models import Count, Sum
+from django.db.models import Count, Sum, Case, When, IntegerField, Value
 
 from ..simple_page.page import Page, LinkGroup, Link
 from ..mldb import models
@@ -180,34 +180,40 @@ def season(request, season):
 
     episodes = season_episodes(season)
 
-    character_trends = [
-        charts.DataSet(
+    trends_data = charts.DataMatrix(
+        [
+            charts.MetaData(character.name, character.slug, character)
+            for character in characters[:10]
+        ],
+        [
+            charts.MetaData(ep.title, ep.slug)
+            for ep in episodes
+        ],
+        [
             [
-                charts.DataPoint(
-                    ep.title,
-                    ep.slug,
-                    ep.n_lines
-                )
+                ep.n_lines
                 for ep in episodes
-                    .filter(line__characters__in=[character])
-                    .annotate(n_lines=Count("line__id"))
-            ],
-            character.name,
-            character.slug,
-            character
-        )
-        for character in characters[:10]
-    ]
-    max_lines = max(ds.max for ds in character_trends)
-    for ds in character_trends:
-        ds.max = max_lines
+                    .annotate(n_lines=Sum(Case(
+                        When(line__characters__in=[character], then=Value(1)),
+                        default=Value(0),
+                        output_field=IntegerField()
+                    )))
+                # The query above is similar to
+                # .filter(line__characters__in=[character])
+                # .annotate(n_lines=Count("line__id"))
+                # but it keeps all of the episodes, even without matchin lines
+            ]
+            for character in characters[:10]
+        ]
+    )
 
     ctx = {
         "season": "%02i" % season,
         "episodes": episodes,
         "characters": characters,
         "character_data": character_data(characters),
-        "character_trends": character_trends
+        "character_trends": trends_data.data_by_row(True),
+        "episode_trends": trends_data.data_by_column(),
     }
     page = MldbPage("Season %s" % season, "mldb/season.html")
     return page.render(request, ctx)

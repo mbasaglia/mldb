@@ -23,8 +23,13 @@ from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from ..simple_page.templatetags.simple_page import make_attrs
 
+class MetaData(object):
+    def __init__(self, label, id, extra=None):
+        self.label = label
+        self.id = id
+        self.extra = extra
 
-class DataPoint(object):
+class DataPoint(MetaData):
     """
     A data point in the graph
     """
@@ -34,8 +39,7 @@ class DataPoint(object):
         \param id    Unique XML-friendly identifier for the data point
         \param value Data value
         """
-        self.label = label
-        self.id = id
+        MetaData.__init__(self, label, id)
         self.value = value
         self.dataset = None
 
@@ -54,19 +58,17 @@ class DataPoint(object):
         return float(self.value) / self.dataset.max if self.dataset.max else 1
 
 
-class DataSet(object):
+class DataSet(MetaData):
     """
     A list of data points
     """
     def __init__(self, points, label="", id="", extra=None):
+        MetaData.__init__(self, label, id, extra)
         self._data = list(points)
         self.total = 0
         self.max = 0
         for point in self._data:
             self._on_add(point)
-        self.label = label
-        self.id = id
-        self.extra = extra
 
     def _on_add(self, point):
         if point.value > self.max:
@@ -86,6 +88,86 @@ class DataSet(object):
 
     def __getitem__(self, key):
         return self._data[key]
+
+
+class DataMatrix(object):
+    """
+    Collects a two-dimensional set of data
+    """
+    def __init__(self, rows, columns, values):
+        """
+        \param rows     List of MetaData
+        \param columns  List of MetaData
+        \param values   Matrix of values
+        \pre len(rows) == len(values) and all(len(row) == len columns for row in values)
+        """
+        self.rows = rows
+        self.columns = columns
+        self.values = values
+
+    def data_by_row(self, global_maximum=False):
+        """
+        Returns a row-wise view of the data
+        \param global_maximum Whether to alter dataset maximums to reflect the
+                              maximum value in the whole data matrix
+
+        Each DataSet represents a row,
+        and each DataPoint a value associated with a column
+        """
+        data = [
+            DataSet(
+                [
+                    DataPoint(
+                        column.label,
+                        column.id,
+                        value
+                    )
+                    for column, value in zip(self.columns, row_values)
+                ],
+                row.label,
+                row.id,
+                row.extra
+            )
+            for row, row_values in zip(self.rows, self.values)
+        ]
+
+        return self._adjust_maximum(data, global_maximum)
+
+
+    def _adjust_maximum(self, data, global_maximum):
+        if global_maximum:
+            max_lines = max(ds.max for ds in data)
+            for ds in data:
+                ds.max = max_lines
+        return data
+
+    def data_by_column(self, global_maximum=False):
+        """
+        Returns a column-wise view of the data
+        \param global_maximum Whether to alter dataset maximums to reflect the
+                              maximum value in the whole data matrix
+
+        Each DataSet represents a column,
+        and each DataPoint a value associated with a row
+        """
+        data = [
+            DataSet(
+                [
+                    DataPoint(
+                        row.label,
+                        row.id,
+                        row_values[x]
+                    )
+                    for row, row_values in zip(self.rows, self.values)
+                ],
+                column.label,
+                column.id,
+                column.extra
+            )
+            for x, column in enumerate(self.columns)
+        ]
+
+        return self._adjust_maximum(data, global_maximum)
 
 
 class SvgPoint(object):
