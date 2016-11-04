@@ -85,13 +85,15 @@ def seasons_context():
     """
     latest_episode = models.Episode.objects.latest("id")
     latest_season = latest_episode.season if latest_episode else 0
-    return [
-        {
-            "number": season,
-            "episodes": season_episodes(season),
-        }
-        for season in range(1, latest_season + 1)
-    ]
+    return {
+        "seasons": [
+            {
+                "number": season,
+                "episodes": season_episodes(season),
+            }
+            for season in range(1, latest_season + 1)
+        ]
+    }
 
 
 def home(request):
@@ -103,8 +105,8 @@ def home(request):
         "n_lines": models.Line.objects.count(),
         "n_episodes": models.Episode.objects.count(),
         "best":  annotate_characters(models.Character.objects).first(),
-        "seasons": seasons_context(),
     }
+    ctx.update(seasons_context())
     page = MldbPage("Home", "mldb/home.html")
     return page.render(request, ctx)
 
@@ -112,13 +114,9 @@ def home(request):
 
 def episodes(request):
     """
-    Homepage view
+    Episode list
     """
-    latest_episode = models.Episode.objects.latest("id")
-    latest_season = latest_episode.season if latest_episode else 0
-    ctx = {
-        "seasons": seasons_context(),
-    }
+    ctx = seasons_context()
     page = MldbPage("Home", "mldb/episode_list.html")
     return page.render(request, ctx)
 
@@ -177,13 +175,39 @@ def season(request, season):
     season = int(season)
     characters =  annotate_characters(
         models.Character.objects
-        .filter(line__episode__gt=100, line__episode__lt=202)
+        .filter(line__episode__gt=season*100, line__episode__lt=(season+1)*100)
     ).distinct()
+
+    episodes = season_episodes(season)
+
+    character_trends = [
+        charts.DataSet(
+            [
+                charts.DataPoint(
+                    ep.title,
+                    ep.slug,
+                    ep.n_lines
+                )
+                for ep in episodes
+                    .filter(line__characters__in=[character])
+                    .annotate(n_lines=Count("line__id"))
+            ],
+            character.name,
+            character.slug,
+            character
+        )
+        for character in characters[:10]
+    ]
+    max_lines = max(ds.max for ds in character_trends)
+    for ds in character_trends:
+        ds.max = max_lines
+
     ctx = {
         "season": "%02i" % season,
-        "episodes": season_episodes(season),
+        "episodes": episodes,
         "characters": characters,
         "character_data": character_data(characters),
+        "character_trends": character_trends
     }
     page = MldbPage("Season %s" % season, "mldb/season.html")
     return page.render(request, ctx)

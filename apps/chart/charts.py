@@ -58,7 +58,7 @@ class DataSet(object):
     """
     A list of data points
     """
-    def __init__(self, points, label="", id=""):
+    def __init__(self, points, label="", id="", extra=None):
         self._data = list(points)
         self.total = 0
         self.max = 0
@@ -66,6 +66,7 @@ class DataSet(object):
             self._on_add(point)
         self.label = label
         self.id = id
+        self.extra = extra
 
     def _on_add(self, point):
         if point.value > self.max:

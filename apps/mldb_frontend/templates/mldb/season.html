@@ -15,6 +15,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 {% endcomment %}
 {% load simple_page %}
+{% load charts %}
 
 <section>
 <header>{% section h2 %}Episodes{% endsection %}</header>
@@ -29,5 +30,38 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 <section>
 <header>{% section h2 %}Characters{% endsection %}</header>
+<figure>
+    <figcaption>Character Trends</figcaption>
+    <svg xmlns="http://www.w3.org/2000/svg"
+        width="400" height="200"
+        viewBox="-5 -5 410 210"
+        class="line_chart">
+        <style>
+            {% for data_set in character_trends %}
+                .line_chart .character_{{ data_set.id }} {
+                    fill: {{ data_set.extra.color }};
+                    stroke: {{ data_set.extra.outline }};
+                }
+            {% endfor %}
+            .line_data path {
+                fill: none;
+            }
+            .line_data {
+                fill: none;
+                stroke-width: 2px;
+            }
+            .line_chart .grid {
+                stroke: silver;
+                stroke-dasharray: 2, 5;
+            }
+        </style>
+        {% line_chart_grid character_trends.0|length "400" "200" class="grid" %}
+        {% for data_set in character_trends %}
+            <g class="line_data">
+                {% line_chart data_set "400" "200" "4" class_prefix="character_" %}
+            </g>
+        {% endfor %}
+    </svg>
+</figure>
 {% include "mldb/character_list.html" %}
 </section>
