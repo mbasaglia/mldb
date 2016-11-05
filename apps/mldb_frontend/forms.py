@@ -82,6 +82,7 @@ class CompareForm(forms.Form):
                                  initial=EpisodeField.default_queryset.first())
     episode_finish = EpisodeField(required=False, label="To",
                                  initial=EpisodeField.default_queryset.last())
+    include_other = forms.BooleanField(required=False)
 
     def clean(self):
         data = super(CompareForm, self).clean()

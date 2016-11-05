@@ -100,7 +100,7 @@ def character_lines_data(queryset, cutoff=10):
         for ch in queryset[0:cutoff]
     )
 
-    if queryset.count() > cutoff:
+    if cutoff and queryset.count() > cutoff:
         character_lines_data.append(charts.DataPoint(
             queryset[cutoff:].aggregate(Sum("n_lines"))["n_lines__sum"],
             "Other", "other"
@@ -200,6 +200,18 @@ def character(request, name):
     return page.render(request, ctx)
 
 
+def count_lines_for(characters, episodes):
+    # This query is similar to
+    # .filter(line__characters__in=[character])
+    # .annotate(n_lines=Count("line__id"))
+    # but it keeps all of the episodes, even without matchin lines
+    return episodes.annotate(n_lines=Sum(Case(
+                When(line__characters__in=list(characters), then=Value(1)),
+                default=Value(0),
+                output_field=IntegerField()
+            ))).values_list("n_lines", flat=True)
+
+
 def get_trends_data(characters, episodes):
     """
     Returnds a data matrix mapping episodes * characters to number of lines
@@ -211,15 +223,7 @@ def get_trends_data(characters, episodes):
             for episode in episodes
         ],
         [
-            episodes.annotate(n_lines=Sum(Case(
-                When(line__characters__in=[character], then=Value(1)),
-                default=Value(0),
-                output_field=IntegerField()
-            ))).values_list("n_lines", flat=True)
-            # The query above is similar to
-            # .filter(line__characters__in=[character])
-            # .annotate(n_lines=Count("line__id"))
-            # but it keeps all of the episodes, even without matchin lines
+            count_lines_for([character], episodes)
             for character in characters
         ]
     )
@@ -240,9 +244,8 @@ def season(request, season):
 
     trends_data = get_trends_data(characters[:cutoff], episodes)
     trends_data.rows.append(charts.MetaData("Other", "other"))
-    trends_data.values.append(
-        list(characters[cutoff:].values_list("n_lines", flat=True))
-    )
+    #import pdb; pdb.set_trace();
+    trends_data.values.append(count_lines_for(characters[cutoff:], episodes))
 
     ctx = {
         "season": "%02i" % season,
@@ -338,12 +341,25 @@ def compare(request):
         if form.is_valid():
             characters = form.cleaned_data["characters"]
             episodes = form.cleaned_data["episode_range"]
+            trends_data = get_trends_data(characters, episodes)
+            lines_data = character_lines_data(characters, None)
+            if form.cleaned_data["include_other"]:
+                other_characters = annotate_characters(
+                    models.Character.objects.exclude(id__in=characters)
+                )
+                other_characters_lines = count_lines_for(other_characters, episodes)
+                trends_data.rows.append(charts.MetaData("Other", "other"))
+                trends_data.values.append(other_characters_lines)
+                lines_data.append(charts.DataPoint(
+                    sum(other_characters_lines),
+                    "Other", "other"
+                ))
             ctx.update({
                 "show_results": True,
                 "characters": characters,
                 "episodes": episodes,
-                "character_lines_data": character_lines_data(characters),
-                "trends_data": get_trends_data(characters, episodes),
+                "character_lines_data": lines_data,
+                "trends_data": trends_data,
             })
     else:
         form = forms.CompareForm()
