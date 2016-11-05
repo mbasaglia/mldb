@@ -27,12 +27,18 @@ register = template.Library()
 
 
 @register.simple_tag
+def character_url(character):
+    return reverse("character", kwargs={"name": character.name})
+
+
+@register.simple_tag
 def character_link(character):
     return format_html(
         "<a href='{}'>{}</a>",
         reverse("character", kwargs={"name": character.name}),
         character.name
     )
+
 
 @register.simple_tag
 def episode_url(episode):
@@ -41,6 +47,7 @@ def episode_url(episode):
         "number": "%02d" % episode.number,
     })
 
+
 @register.simple_tag
 def episode_link(episode):
     return format_html(
@@ -48,6 +55,7 @@ def episode_link(episode):
         episode_url(episode),
         episode.title
     )
+
 
 @register.simple_tag
 def season_url(season):

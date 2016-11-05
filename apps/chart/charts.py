@@ -24,22 +24,40 @@ from django.utils.safestring import mark_safe
 from ..simple_page.templatetags.simple_page import make_attrs
 
 class MetaData(object):
-    def __init__(self, label, id, extra=None):
+    def __init__(self, label="", id="", link=None, extra=None):
         self.label = label
         self.id = id
+        self.link = link
         self.extra = extra
+
+    def ctor_args(self):
+        return (self.label, self.id, self.link, self.extra)
+
+    def wrap_link(self, svg, xmlns="xlink"):
+        if not self.link:
+            return svg
+        if xmlns and xmlns[-1] != ':':
+            xmlns += ':'
+        return mark_safe(
+            "<a %shref='%s'>%s</a>" % (
+                xmlns,
+                escape(self.link),
+                svg,
+            )
+        )
+
 
 class DataPoint(MetaData):
     """
     A data point in the graph
     """
-    def __init__(self, label, id, value):
+    def __init__(self, value, *args, **kwargs):
         """
         \param label Human-readable string to identify the value
         \param id    Unique XML-friendly identifier for the data point
         \param value Data value
         """
-        MetaData.__init__(self, label, id)
+        MetaData.__init__(self, *args, **kwargs)
         self.value = value
         self.dataset = None
 
@@ -62,8 +80,8 @@ class DataSet(MetaData):
     """
     A list of data points
     """
-    def __init__(self, points, label="", id="", extra=None):
-        MetaData.__init__(self, label, id, extra)
+    def __init__(self, points, *args, **kwargs):
+        MetaData.__init__(self, *args, **kwargs)
         self._data = list(points)
         self.total = 0
         self.max = 0
@@ -117,16 +135,10 @@ class DataMatrix(object):
         data = [
             DataSet(
                 [
-                    DataPoint(
-                        column.label,
-                        column.id,
-                        value
-                    )
+                    DataPoint(value, *column.ctor_args())
                     for column, value in zip(self.columns, row_values)
                 ],
-                row.label,
-                row.id,
-                row.extra
+                *row.ctor_args()
             )
             for row, row_values in zip(self.rows, self.values)
         ]
@@ -153,16 +165,10 @@ class DataMatrix(object):
         data = [
             DataSet(
                 [
-                    DataPoint(
-                        row.label,
-                        row.id,
-                        row_values[x]
-                    )
+                    DataPoint(row_values[x], *row.ctor_args())
                     for row, row_values in zip(self.rows, self.values)
                 ],
-                column.label,
-                column.id,
-                column.extra
+                *column.ctor_args()
             )
             for x, column in enumerate(self.columns)
         ]
@@ -180,6 +186,30 @@ class SvgPoint(object):
 
     def __str__(self):
         return "%s,%s " % (self.x, self.y)
+
+
+class SvgRect(object):
+    def __init__(self, x=0, y=0, width=0, height=0):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+
+    @property
+    def top_left(self):
+        return SvgPoint(self.x, self.y)
+
+    @property
+    def top_right(self):
+        return SvgPoint(self.x + self.width, self.y)
+
+    @property
+    def bottom_right(self):
+        return SvgPoint(self.x + self.width, self.y + self.height)
+
+    @property
+    def bottom_left(self):
+        return SvgPoint(self.x, self.y + self.height)
 
 
 class PieChart(object):
@@ -246,34 +276,11 @@ class PieChart(object):
                 "data-value": point.value,
                 "data-name": point.label,
             }
-            slices += self.render_slice(angle, angle_delta, attrs,
-                                        self.format_title(point)) + "\n"
+            slices += point.wrap_link(
+                self.render_slice(angle, angle_delta, attrs, self.format_title(point))
+            ) + "\n"
             angle += angle_delta
         return mark_safe(slices)
-
-
-class SvgRect(object):
-    def __init__(self, x=0, y=0, width=0, height=0):
-        self.x = x
-        self.y = y
-        self.width = width
-        self.height = height
-
-    @property
-    def top_left(self):
-        return SvgPoint(self.x, self.y)
-
-    @property
-    def top_right(self):
-        return SvgPoint(self.x + self.width, self.y)
-
-    @property
-    def bottom_right(self):
-        return SvgPoint(self.x + self.width, self.y + self.height)
-
-    @property
-    def bottom_left(self):
-        return SvgPoint(self.x, self.y + self.height)
 
 
 class LineChart(object):
@@ -307,13 +314,13 @@ class LineChart(object):
             attrs["id"] = id_prefix + data.id
             attrs["class"] = class_prefix + data.id
 
-        return mark_safe(
+        return data.wrap_link(mark_safe(
             "<path %s>"
             "<title>%s</title>"
             "</path>" % (
             make_attrs(attrs),
             data.label
-        ))
+        )))
 
     def format_title(self, point):
         return "%s (%s)" % (point.label, point.value)
@@ -331,14 +338,16 @@ class LineChart(object):
             attrs["class"] = class_prefix + data.id
         attrstring = make_attrs(attrs)
         return mark_safe("\n".join(
-            "<circle %s data-value='%s' data-name='%s' %s>"
-            "<title>%s</title>"
-            "</circle>" % (
-                self._circlepoint(index, data, point.normalized),
-                point.value,
-                point.label,
-                attrstring,
-                self.format_title(point),
+            point.wrap_link(
+                "<circle %s data-value='%s' data-name='%s' %s>"
+                "<title>%s</title>"
+                "</circle>" % (
+                    self._circlepoint(index, data, point.normalized),
+                    point.value,
+                    point.label,
+                    attrstring,
+                    self.format_title(point),
+                )
             )
             for index, point in enumerate(data)
         ))
@@ -448,7 +457,9 @@ class StackedBarChart(object):
                 "data-value": point.value,
                 "data-name": point.label,
             }
-            items += self.render_bar_item(rect, attrs, self.format_title(point)) + "\n"
+            items += point.wrap_link(
+                self.render_bar_item(rect, attrs, self.format_title(point))
+            ) + "\n"
             y += rect.height
         return mark_safe("<g>%s</g>\n" % items)
 

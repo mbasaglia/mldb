@@ -28,6 +28,7 @@ from django.conf import settings
 from ..simple_page.page import Page, LinkGroup, Link
 from ..mldb import models
 from ..chart import charts
+from templatetags import mldb as links
 import forms
 from forms import annotate_characters
 
@@ -136,9 +137,8 @@ def character(request, name):
     episode_data = charts.DataSet(
         (
             charts.DataPoint(
-                ep.title,
-                ep.slug,
-                ep.line_set.filter(characters__in=[character]).count()
+                ep.line_set.filter(characters__in=[character]).count(),
+                *episode_metadata(ep).ctor_args()
             )
             for ep in episodes
         ),
@@ -158,6 +158,24 @@ def character(request, name):
     }
     page = MldbPage(character.name, "mldb/character.html")
     return page.render(request, ctx)
+
+
+def character_metadata(character):
+    return charts.MetaData(
+        character.name,
+        character.slug,
+        links.character_url(character),
+        character
+    )
+
+
+def episode_metadata(episode):
+    return charts.MetaData(
+        episode.title,
+        episode.slug,
+        links.episode_url(episode),
+        character
+    )
 
 
 def season(request, season):
@@ -186,16 +204,16 @@ def season(request, season):
 
     trends_data = charts.DataMatrix(
         [
-            charts.MetaData(character.name, character.slug, character)
+            character_metadata(character)
             for character in characters[:cutoff]
         ],
-        [ charts.MetaData(ep.title, ep.slug) for ep in episodes ],
+        [ episode_metadata(episode) for episode in episodes ],
         [
             get_lines([character]).values_list("n_lines", flat=True)
             for character in characters[:cutoff]
         ]
     )
-    trends_data.rows.append(charts.MetaData("Other", "other", None))
+    trends_data.rows.append(charts.MetaData("Other", "other"))
     trends_data.values.append(
         list(characters[cutoff:].values_list("n_lines", flat=True))
     )
@@ -217,14 +235,14 @@ def character_lines_data(queryset, cutoff=10):
     Retrieves the chart dataset from the queryset
     """
     character_lines_data = charts.DataSet(
-        charts.DataPoint(ch.name, ch.slug, ch.n_lines)
+        charts.DataPoint(ch.n_lines, *character_metadata(ch).ctor_args())
         for ch in queryset[0:cutoff]
     )
 
     if queryset.count() > cutoff:
         character_lines_data.append(charts.DataPoint(
-            "Other", "other",
-            queryset[cutoff:].aggregate(Sum("n_lines"))["n_lines__sum"]
+            queryset[cutoff:].aggregate(Sum("n_lines"))["n_lines__sum"],
+            "Other", "other"
         ))
 
     return character_lines_data
