@@ -23,11 +23,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         viewBox="-1 -1 102 102">
         <style>
         {% for character in characters %}
-            path.character_{{ character.slug }} {
+            .character_{{ character.slug }} {
                 fill: {{ character.color }};
                 stroke: {{ character.outline }};
             }
-            path.character_other {
+            .character_other {
                 fill: silver;
                 stroke: gray;
             }

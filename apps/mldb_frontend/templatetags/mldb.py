@@ -18,6 +18,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import unicode_literals
 from django import template
 from django.utils.html import format_html
 from django.urls import reverse

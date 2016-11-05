@@ -19,13 +19,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 <section>
 <header>{% section h2 %}Episodes{% endsection %}</header>
-<ul>
+<ol>
 {% for episode in episodes %}
     <li>
         <a href='{% url "episode" season=episode.season number=episode.number %}'>{{ episode.title }}</a>
     </li>
 {% endfor %}
-</ul>
+</ol>
 </section>
 
 <section>
