@@ -38,6 +38,14 @@ class LinkGroup(object):
     def __iter__(self):
         return iter(self.links)
 
+    def __contains__(self, url):
+        if isinstance(url, Link):
+            url = url.url
+        return any(link.url == url for link in self.links)
+
+    def __nonzero__(self):
+        return len(self.links)
+
 
 class Page(object):
     site_name = ""

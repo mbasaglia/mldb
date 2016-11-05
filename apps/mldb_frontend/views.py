@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import math
 
 from django.shortcuts import get_object_or_404
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.db.models import Count, Sum, Case, When, IntegerField, Value
 from django.conf import settings
 
@@ -47,6 +47,7 @@ class MldbPage(Page):
         LinkGroup(site_name, [
             Link(reverse_lazy("home"), "Home"),
             Link(reverse_lazy("characters"), "Characters"),
+            Link(reverse_lazy("episodes"), "Episodes"),
         ]),
         LinkGroup("API", [
             Link(reverse_lazy("api:docs"), "Documentation"),
@@ -89,6 +90,42 @@ def seasons_context():
     }
 
 
+def character_lines_data(queryset, cutoff=10):
+    """
+    Retrieves the chart dataset from the queryset
+    """
+    character_lines_data = charts.DataSet(
+        charts.DataPoint(ch.n_lines, *character_metadata(ch).ctor_args())
+        for ch in queryset[0:cutoff]
+    )
+
+    if queryset.count() > cutoff:
+        character_lines_data.append(charts.DataPoint(
+            queryset[cutoff:].aggregate(Sum("n_lines"))["n_lines__sum"],
+            "Other", "other"
+        ))
+
+    return character_lines_data
+
+
+def character_metadata(character):
+    return charts.MetaData(
+        character.name,
+        character.slug,
+        links.character_url(character),
+        character
+    )
+
+
+def episode_metadata(episode):
+    return charts.MetaData(
+        episode.title,
+        episode.slug,
+        links.episode_url(episode),
+        character
+    )
+
+
 def home(request):
     """
     Homepage view
@@ -104,7 +141,6 @@ def home(request):
     return page.render(request, ctx)
 
 
-
 def episodes(request):
     """
     Episode list
@@ -112,7 +148,6 @@ def episodes(request):
     ctx = seasons_context()
     page = MldbPage("Home", "mldb/episode_list.html")
     return page.render(request, ctx)
-
 
 
 def characters(request):
@@ -157,25 +192,11 @@ def character(request, name):
         "episode_data": episode_data,
     }
     page = MldbPage(character.name, "mldb/character.html")
+    page.breadcrumbs.links = [
+        Link(reverse("characters"), "Characters"),
+        Link(links.character_url(character), name),
+    ]
     return page.render(request, ctx)
-
-
-def character_metadata(character):
-    return charts.MetaData(
-        character.name,
-        character.slug,
-        links.character_url(character),
-        character
-    )
-
-
-def episode_metadata(episode):
-    return charts.MetaData(
-        episode.title,
-        episode.slug,
-        links.episode_url(episode),
-        character
-    )
 
 
 def season(request, season):
@@ -227,25 +248,11 @@ def season(request, season):
         "episode_trends": trends_data.data_by_column(),
     }
     page = MldbPage("Season %s" % season, "mldb/season.html")
+    page.breadcrumbs.links = [
+        Link(reverse("episodes"), "Episodes"),
+        Link(links.season_url(season), "Season %s" % season),
+    ]
     return page.render(request, ctx)
-
-
-def character_lines_data(queryset, cutoff=10):
-    """
-    Retrieves the chart dataset from the queryset
-    """
-    character_lines_data = charts.DataSet(
-        charts.DataPoint(ch.n_lines, *character_metadata(ch).ctor_args())
-        for ch in queryset[0:cutoff]
-    )
-
-    if queryset.count() > cutoff:
-        character_lines_data.append(charts.DataPoint(
-            queryset[cutoff:].aggregate(Sum("n_lines"))["n_lines__sum"],
-            "Other", "other"
-        ))
-
-    return character_lines_data
 
 
 def episode(request, season, number):
@@ -274,6 +281,11 @@ def episode(request, season, number):
         "wiki_url": settings.WIKI_BASE,
     }
     page = MldbPage(episode.title, "mldb/episode.html")
+    page.breadcrumbs.links = [
+        Link(reverse("episodes"), "Episodes"),
+        Link(links.season_url(season), "Season %s" % season),
+        Link(request.path, episode.title),
+    ]
     return page.render(request, ctx)
 
 

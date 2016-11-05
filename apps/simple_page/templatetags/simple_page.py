@@ -18,6 +18,8 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+import urllib
+
 from django import template
 from django.utils.html import escape, strip_tags
 from django.utils.text import slugify
@@ -128,9 +130,12 @@ def link(context, target, text=None, **attrs):
     Renders a link.
     If the target points to the current page, it renders a span instead.
     """
+    target = str(urllib.unquote(target))
     if text is None:
         text = target
     request = context["request"]
+
+    match = False
     if request.path == target:
         if "class" in attrs:
             attrs["class"] += ' ' + 'current_link'
@@ -145,6 +150,13 @@ def link(context, target, text=None, **attrs):
         attrs=make_attrs(attrs),
         text=text
     ))
+
+
+@register.simple_tag(takes_context=True)
+def if_crumb(context, url, text):
+    if str(urllib.unquote(url)) in context["page"].breadcrumbs:
+        return mark_safe(text)
+    return ""
 
 
 @register.simple_tag

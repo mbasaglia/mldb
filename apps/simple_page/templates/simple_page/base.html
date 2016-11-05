@@ -24,24 +24,21 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     {% endif %}
 </head>
 <body>
-
-
-{% if page.menu or page.breadcrubs %}
+{% if page.menu or page.breadcrumbs %}
     <nav class="menu">
         {% if page.menu %}
             <ul class="main_menu">
                 {% for link in page.menu %}
-                    <li>{% link link.url link.text%}</li>
+                    <li {% if_crumb link.url "class='current_menu_item'" %}>{% link link.url link.text %}</li>
                 {% endfor %}
             </ul>
         {% endif %}
 
-        {% if page.breadcrubs %}
-            <ul class="breadcrubs">
+        {% if page.breadcrumbs %}
+            <ul class="breadcrumbs">
                 {% for link in page.breadcrumbs %}
                     <li>{% link link.url link.text%}</li>
                 {% endfor %}
-                <li class="current_crumb">{{ title }}</li>
             </ul>
         {% endif %}
     </nav>
@@ -60,7 +57,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             <div class="footer_title">{{ section.title }}</div>
             <ul>
                 {% for link in section.links %}
-                    <li>{% link link.url link.text%}</li>
+                    <li>{% link link.url link.text %}</li>
                 {% endfor %}
             </ul>
         </nav>
