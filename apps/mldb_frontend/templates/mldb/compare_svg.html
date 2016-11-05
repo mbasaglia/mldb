@@ -1,0 +1,57 @@
+{% comment %}
+Copyright 2016 Mattia Basaglia
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+{% endcomment %}
+{% load simple_page %}
+{% load charts %}
+
+<figure>
+    <figcaption>Character Trends</figcaption>
+    <svg xmlns="http://www.w3.org/2000/svg"
+        xmlns:xlink="http://www.w3.org/1999/xlink"
+        width="600" height="300"
+        viewBox="-6 -6 612 312"
+        class="line_chart">
+        <style>
+            {% for ch_data in trends_data.rows %}
+                .character_{{ ch_data.id }} {
+                    fill: {{ ch_data.extra.color }};
+                    stroke: {{ ch_data.extra.outline }};
+                }
+            {% endfor %}
+            .line_data path {
+                fill: none;
+            }
+            svg {
+                stroke-width: 2px;
+            }
+            .line_chart .grid {
+                stroke: silver;
+                stroke-dasharray: 2, 5;
+            }
+        </style>
+        {% line_chart trends_data.data_by_row_global_max "600" "300" "4" class_prefix="character_" %}
+    </svg>
+</figure>
+<figure>
+    <figcaption>Characters Per Episode</figcaption>
+    <svg xmlns="http://www.w3.org/2000/svg"
+        xmlns:xlink="http://www.w3.org/1999/xlink"
+        width="600" height="300"
+        viewBox="-2 -2 604 304"
+        class="stacked_chart">
+        {% stacked_bar_chart trends_data.data_by_column "600" "300" class_prefix="character_" %}
+    </svg>
+</figure>

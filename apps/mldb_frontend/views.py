@@ -41,6 +41,7 @@ class MldbPage(Page):
         Link(reverse_lazy("home"), "Home"),
         Link(reverse_lazy("characters"), "Characters"),
         Link(reverse_lazy("episodes"), "Episodes"),
+        Link(reverse_lazy("compare"), "Compare"),
         Link(reverse_lazy("search"), "Search"),
     ])
     footer = [
@@ -199,6 +200,31 @@ def character(request, name):
     return page.render(request, ctx)
 
 
+def get_trends_data(characters, episodes):
+    """
+    Returnds a data matrix mapping episodes * characters to number of lines
+    """
+    return charts.DataMatrix(
+        [ character_metadata(character) for character in characters ],
+        [
+            episode_metadata(episode)
+            for episode in episodes
+        ],
+        [
+            episodes.annotate(n_lines=Sum(Case(
+                When(line__characters__in=[character], then=Value(1)),
+                default=Value(0),
+                output_field=IntegerField()
+            ))).values_list("n_lines", flat=True)
+            # The query above is similar to
+            # .filter(line__characters__in=[character])
+            # .annotate(n_lines=Count("line__id"))
+            # but it keeps all of the episodes, even without matchin lines
+            for character in characters
+        ]
+    )
+
+
 def season(request, season):
     """
     List of episodes in the given season
@@ -212,28 +238,7 @@ def season(request, season):
     episodes = season_episodes(season)
     cutoff = 10
 
-    def get_lines(characters):
-        # The query above is similar to
-        # .filter(line__characters__in=[character])
-        # .annotate(n_lines=Count("line__id"))
-        # but it keeps all of the episodes, even without matchin lines
-        return episodes.annotate(n_lines=Sum(Case(
-            When(line__characters__in=characters, then=Value(1)),
-            default=Value(0),
-            output_field=IntegerField()
-        )))
-
-    trends_data = charts.DataMatrix(
-        [
-            character_metadata(character)
-            for character in characters[:cutoff]
-        ],
-        [ episode_metadata(episode) for episode in episodes ],
-        [
-            get_lines([character]).values_list("n_lines", flat=True)
-            for character in characters[:cutoff]
-        ]
-    )
+    trends_data = get_trends_data(characters[:cutoff], episodes)
     trends_data.rows.append(charts.MetaData("Other", "other"))
     trends_data.values.append(
         list(characters[cutoff:].values_list("n_lines", flat=True))
@@ -244,8 +249,7 @@ def season(request, season):
         "episodes": episodes,
         "characters": characters,
         "character_lines_data": character_lines_data(characters),
-        "character_trends": trends_data.data_by_row(True),
-        "episode_trends": trends_data.data_by_column(),
+        "trends_data": trends_data,
     }
     page = MldbPage("Season %s" % season, "mldb/season.html")
     page.breadcrumbs.links = [
@@ -322,4 +326,29 @@ def search(request):
         "curpage": curpage,
     }
     page = MldbPage("Search", "mldb/search.html")
+    return page.render(request, ctx)
+
+
+def compare(request):
+    ctx = {
+        "show_results": False
+    }
+    if request.GET:
+        form = forms.CompareForm(request.GET)
+        if form.is_valid():
+            characters = form.cleaned_data["characters"]
+            episodes = form.cleaned_data["episode_range"]
+            ctx.update({
+                "show_results": True,
+                "characters": characters,
+                "episodes": episodes,
+                "character_lines_data": character_lines_data(characters),
+                "trends_data": get_trends_data(characters, episodes),
+            })
+    else:
+        form = forms.CompareForm()
+
+    ctx["form"] = form
+
+    page = MldbPage("Compare Characters", "mldb/compare.html")
     return page.render(request, ctx)

@@ -23,6 +23,7 @@ from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from ..simple_page.templatetags.simple_page import make_attrs
 
+
 class MetaData(object):
     def __init__(self, label="", id="", link=None, extra=None):
         self.label = label
@@ -66,7 +67,7 @@ class DataPoint(MetaData):
         """
         Percentage of the total
         """
-        return float(self.value) / self.dataset.total
+        return float(self.value) / self.dataset.total if self.dataset.total else 0
 
     @property
     def normalized(self):
@@ -123,6 +124,13 @@ class DataMatrix(object):
         self.columns = columns
         self.values = values
 
+    def _adjust_maximum(self, data, global_maximum):
+        if global_maximum:
+            max_lines = max(ds.max for ds in data)
+            for ds in data:
+                ds.max = max_lines
+        return data
+
     def data_by_row(self, global_maximum=False):
         """
         Returns a row-wise view of the data
@@ -145,14 +153,6 @@ class DataMatrix(object):
 
         return self._adjust_maximum(data, global_maximum)
 
-
-    def _adjust_maximum(self, data, global_maximum):
-        if global_maximum:
-            max_lines = max(ds.max for ds in data)
-            for ds in data:
-                ds.max = max_lines
-        return data
-
     def data_by_column(self, global_maximum=False):
         """
         Returns a column-wise view of the data
@@ -174,6 +174,18 @@ class DataMatrix(object):
         ]
 
         return self._adjust_maximum(data, global_maximum)
+
+    def data_by_row_global_max(self):
+        """
+        Helper for simpler use in templates
+        """
+        return self.data_by_row(True)
+
+    def data_by_column_global_max(self):
+        """
+        Helper for simpler use in templates
+        """
+        return self.data_by_column(True)
 
 
 class SvgPoint(object):

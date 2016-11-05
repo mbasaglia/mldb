@@ -30,5 +30,6 @@ urlpatterns = [
     url(r'^episodes/(?P<season>[0-9]+)/(?P<number>[0-9]+)/?$', views.episode, name="episode"),
     url(r'^search/?$', views.search, name="search"),
     url(r'^characters/?$', views.characters, name="characters"),
+    url(r'^characters/compare/?$', views.compare, name="compare"),
     url(r'^(?P<name>.*?)/?$', views.character, name="character"),
 ]

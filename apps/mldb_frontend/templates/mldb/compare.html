@@ -15,21 +15,19 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 {% endcomment %}
 {% load simple_page %}
-{% load charts %}
 
 <section>
-<header>{% section h2 %}Episodes{% endsection %}</header>
-<ol>
-{% for episode in episodes %}
-    <li>
-        <a href='{% url "episode" season=episode.season number=episode.number %}'>{{ episode.title }}</a>
-    </li>
-{% endfor %}
-</ol>
+<header>{% section h2 %}Search{% endsection %}</header>
+<form>
+{{ form }}
+<input type="submit" value="Compare" />
+</form>
 </section>
 
+{% if show_results %}
 <section>
-<header>{% section h2 %}Characters{% endsection %}</header>
+<header>{% section h2 %}Results{% endsection %}</header>
 {% include "mldb/compare_svg.html" %}
 {% include "mldb/character_list.html" %}
 </section>
+{% endif %}
