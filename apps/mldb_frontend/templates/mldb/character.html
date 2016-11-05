@@ -20,8 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 <figure>
     <figcaption>Character Lines</figcaption>
     <svg xmlns="http://www.w3.org/2000/svg"
-        width="400" height="200"
-        viewBox="-5 -5 410 210">
+        width="600" height="300"
+        viewBox="-6 -6 612 312">
         <style>
             .character_{{ character.slug }} {
                 fill: {{ character.color }};
@@ -36,7 +36,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                 stroke-dasharray: 2, 5;
             }
         </style>
-        {% line_chart episode_data "400" "200" "4" class_prefix="character_" %}
+        {% line_chart episode_data "600" "300" "4" class_prefix="character_" %}
     </svg>
 </figure>
 <p>{{ character.name }} spoke a total of

@@ -171,32 +171,33 @@ def season(request, season):
     ).distinct()
 
     episodes = season_episodes(season)
+    cutoff = 10
+
+    def get_lines(characters):
+        # The query above is similar to
+        # .filter(line__characters__in=[character])
+        # .annotate(n_lines=Count("line__id"))
+        # but it keeps all of the episodes, even without matchin lines
+        return episodes.annotate(n_lines=Sum(Case(
+            When(line__characters__in=characters, then=Value(1)),
+            default=Value(0),
+            output_field=IntegerField()
+        )))
 
     trends_data = charts.DataMatrix(
         [
             charts.MetaData(character.name, character.slug, character)
-            for character in characters[:10]
+            for character in characters[:cutoff]
         ],
+        [ charts.MetaData(ep.title, ep.slug) for ep in episodes ],
         [
-            charts.MetaData(ep.title, ep.slug)
-            for ep in episodes
-        ],
-        [
-            [
-                ep.n_lines
-                for ep in episodes
-                    .annotate(n_lines=Sum(Case(
-                        When(line__characters__in=[character], then=Value(1)),
-                        default=Value(0),
-                        output_field=IntegerField()
-                    )))
-                # The query above is similar to
-                # .filter(line__characters__in=[character])
-                # .annotate(n_lines=Count("line__id"))
-                # but it keeps all of the episodes, even without matchin lines
-            ]
-            for character in characters[:10]
+            get_lines([character]).values_list("n_lines", flat=True)
+            for character in characters[:cutoff]
         ]
+    )
+    trends_data.rows.append(charts.MetaData("Other", "other", None))
+    trends_data.values.append(
+        list(characters[cutoff:].values_list("n_lines", flat=True))
     )
 
     ctx = {
