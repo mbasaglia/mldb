@@ -45,7 +45,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 <ul>
 {% for episode in episodes %}
     <li>
-        <a href='{% episode_url episode %}'>{{ episode.title }}</a>
+        {% episode_link episode %}
         (<a href='{% url "search" %}?episode={{ episode.formatted_id }}&amp;character={{ character.name }}'
             >{{ episode.n_lines }} line{{ episode.n_lines|pluralize }}</a>)
     </li>

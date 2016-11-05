@@ -16,10 +16,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 {% endcomment %}
 {% load mldb %}
 {% for season in seasons %}
-    <h3><a href="{% url "season" season=season.number %}">Season {{ season.number }}</a></h3>
+    <h3><a href="{% season_url season.number %}">Season {{ season.number }}</a></h3>
     <ol>
     {% for episode in season.episodes %}
-        <li><a href="{% episode_url episode %}">{{ episode.title }}</a></li>
+        <li>{% episode_link episode %}</li>
     {% endfor %}
     </ol>
 {% endfor %}

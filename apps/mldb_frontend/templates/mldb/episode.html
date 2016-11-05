@@ -19,6 +19,23 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 {% load mldb %}
 
 <section>
+<header>{% section h2 %}Information{% endsection %}</header>
+<table>
+    <tr><th>Title</th><td>{{ episode.title }}</td></tr>
+    <tr><th>Season</th><td><a href="{% season_url episode.season %}">{{ episode.season }}</a></td></tr>
+    <tr><th>Number</th><td>{{ episode.number }}</td></tr>
+    <tr><th>Overall Number</th><td>{{ episode.overall_number }}</td></tr>
+    <tr><th>Wiki Page</th><td><a href="{{ wiki_url }}{{ episode.slug }}">{{ episode.title }}</td></tr>
+    {% if episode.previous %}
+        <tr><th>Previous</th><td>{% episode_link episode.previous %}</td></tr>
+    {% endif %}
+    {% if episode.next %}
+        <tr><th>Next</th><td>{% episode_link episode.next %}</td></tr>
+    {% endif %}
+</table>
+</section>
+
+<section>
 <header>{% section h2 %}Characters{% endsection %}</header>
 {% with single=1 %}
     {% include "mldb/character_list.html" %}

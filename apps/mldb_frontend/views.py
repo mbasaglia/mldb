@@ -54,7 +54,7 @@ class MldbPage(Page):
         LinkGroup("Sources", [
             Link("https://github.com/mbasaglia/mldb", "MLDB"),
             Link("https://github.com/mbasaglia/Pony-Lines", "Pony-Lines"),
-            Link("http://mlp.wikia.com/wiki/My_Little_Pony_Friendship_is_Magic_Wiki", "MLP Wiki"),
+            Link(settings.WIKI_BASE, "MLP Wiki"),
         ]),
     ]
 
@@ -251,7 +251,8 @@ def episode(request, season, number):
             .filter(episode=episode)
             .prefetch_related("characters")
             .order_by("order"),
-        "character_lines_data": character_lines_data(characters)
+        "character_lines_data": character_lines_data(characters),
+        "wiki_url": settings.WIKI_BASE,
     }
     page = MldbPage(episode.title, "mldb/episode.html")
     return page.render(request, ctx)

@@ -20,10 +20,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import re
 import urllib
+import colorsys
+
 from django.db import models
 from django.core.validators import RegexValidator
+from django.utils.functional import cached_property
+
 from unidecode import unidecode_expect_ascii as unidecode
-import colorsys
 
 
 class Episode(models.Model):
@@ -70,6 +73,18 @@ class Episode(models.Model):
     @property
     def formatted_id(self):
         return Episode.format_id(self.id)
+
+    @cached_property
+    def previous(self):
+        return Episode.objects.filter(id__lt=self.id).order_by("-id").first()
+
+    @cached_property
+    def next(self):
+        return Episode.objects.filter(id__gt=self.id).order_by("id").first()
+
+    @cached_property
+    def overall_number(self):
+        return Episode.objects.filter(id__lt=self.id).count() + 1
 
     def __unicode__(self):
         return "%s %s" % (self.formatted_id, self.title)

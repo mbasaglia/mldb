@@ -40,3 +40,17 @@ def episode_url(episode):
         "season": "%02d" % episode.season,
         "number": "%02d" % episode.number,
     })
+
+@register.simple_tag
+def episode_link(episode):
+    return format_html(
+        "<a href='{}'>{}</a>",
+        episode_url(episode),
+        episode.title
+    )
+
+@register.simple_tag
+def season_url(season):
+    return reverse("season", kwargs={
+        "season": "%02d" % int(season),
+    })

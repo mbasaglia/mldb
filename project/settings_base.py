@@ -122,3 +122,4 @@ USE_TZ = True
 STATIC_URL = "/static/"
 
 SEARCH_MAX_RESULTS = 25
+WIKI_BASE = "http://mlp.wikia.com/wiki/"
