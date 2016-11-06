@@ -141,7 +141,7 @@ class Character(models.Model):
                         CharacterAlias.objects.get(name=name)
                         .character_set.all()
                     )
-                except cls.DoesNotExist:
+                except CharacterAlias.DoesNotExist:
                     obj = cls(name=name, slug=cls.name_to_slug(name))
                     obj.save()
                     objects.add(obj)
