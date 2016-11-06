@@ -30,7 +30,6 @@ from ..mldb import models
 from ..chart import charts
 from templatetags import mldb as links
 import forms
-from forms import annotate_characters
 
 class MldbPage(Page):
     """
@@ -135,7 +134,7 @@ def home(request):
         "n_characters": models.Character.objects.count(),
         "n_lines": models.Line.objects.count(),
         "n_episodes": models.Episode.objects.count(),
-        "best":  annotate_characters(models.Character.objects).first(),
+        "best":  models.annotate_characters(models.Character.objects).first(),
     }
     ctx.update(seasons_context())
     page = MldbPage("Home", "mldb/home.html")
@@ -155,7 +154,7 @@ def characters(request):
     """
     Full list of characters
     """
-    characters = annotate_characters(models.Character.objects)
+    characters = models.annotate_characters(models.Character.objects)
     ctx = {
         "characters": characters,
         "character_lines_data": character_lines_data(characters),
@@ -234,7 +233,7 @@ def season(request, season):
     List of episodes in the given season
     """
     season = int(season)
-    characters =  annotate_characters(
+    characters = models.annotate_characters(
         models.Character.objects
         .filter(line__episode__gt=season*100, line__episode__lt=(season+1)*100)
     ).distinct()
@@ -273,7 +272,7 @@ def episode(request, season, number):
         id=models.Episode.make_id(season, number)
     )
 
-    characters =  annotate_characters(
+    characters = models.annotate_characters(
         models.Character.objects.filter(line__episode=episode)
     ).distinct()
 
@@ -344,7 +343,7 @@ def compare(request):
             trends_data = get_trends_data(characters, episodes)
             lines_data = character_lines_data(characters, None)
             if form.cleaned_data["include_other"]:
-                other_characters = annotate_characters(
+                other_characters = models.annotate_characters(
                     models.Character.objects.exclude(id__in=characters)
                 )
                 other_characters_lines = count_lines_for(other_characters, episodes)

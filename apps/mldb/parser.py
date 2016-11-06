@@ -60,15 +60,7 @@ def load_lines(filename, episode):
         for names, text in lines(file):
             line_objects.append((
                 models.Line(episode=episode, order=order, text=text),
-                [
-                    models.Character.objects.get_or_create(
-                        name=name,
-                        defaults={
-                            "slug": models.Character.name_to_slug(name),
-                        }
-                    )[0]
-                    for name in names
-                ]
+                models.Character.get_or_create_all(names)
             ))
             order += 1
 

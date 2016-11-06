@@ -98,11 +98,28 @@ def ColorField(*args, **kwargs):
     )
 
 
+class CharacterAlias(models.Model):
+    """
+    Aliases a name to a character (or a group of characters)
+    """
+    class Meta:
+        verbose_name_plural = "Character aliases"
+
+    name = models.CharField(max_length=128, db_index=True, blank=False, unique=True)
+
+    def __unicode__(self):
+        return "%s -> %s" % (
+            self.name,
+            ",".join(map(str, self.character_set.values_list("name", flat=True)))
+        )
+
+
 class Character(models.Model):
     name = models.CharField(max_length=128, db_index=True, blank=False)
     slug = models.CharField(max_length=128, unique=True, blank=False)
     color = ColorField(default='#ffffff')
     outline = ColorField(default='#cccccc')
+    aliases = models.ManyToManyField(CharacterAlias)
 
     @staticmethod
     def name_to_slug(name):
@@ -111,6 +128,24 @@ class Character(models.Model):
             "",
             unidecode(name.decode("utf8")).lower().replace(" ", "_")
         )
+
+    @classmethod
+    def get_or_create_all(cls, names):
+        objects = set()
+        for name in names:
+            try:
+                objects.add(cls.objects.get(name=name))
+            except cls.DoesNotExist:
+                try:
+                    objects.update(
+                        CharacterAlias.objects.get(name=name)
+                        .character_set.all()
+                    )
+                except cls.DoesNotExist:
+                    obj = cls(name=name, slug=cls.name_to_slug(name))
+                    obj.save()
+                    objects.add(obj)
+        return objects
 
     def __unicode__(self):
         return self.name
@@ -127,3 +162,15 @@ class Line(models.Model):
 
     def __unicode__(self):
         return self.text
+
+
+def annotate_characters(character_queryset):
+    """
+    Annotates line and episode counts and sorts a Character model queryset
+    """
+    return (
+        character_queryset
+        .annotate(n_lines=models.Count("line"),
+                  episodes=models.Count("line__episode", distinct=True))
+        .order_by("-n_lines", "-episodes", "name")
+    )

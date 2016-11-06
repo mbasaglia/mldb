@@ -19,26 +19,13 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 from django import forms
-from django.db.models import Count
 from ..mldb import models
-
-
-def annotate_characters(character_queryset):
-    """
-    Annotates line and episode counts and sorts a Character model queryset
-    """
-    return (
-        character_queryset
-        .annotate(n_lines=Count("line"),
-                  episodes=Count("line__episode", distinct=True))
-        .order_by("-n_lines", "-episodes", "name")
-    )
 
 
 class MultipleCharactersField(forms.ModelMultipleChoiceField):
     def __init__(self, queryset=None, min=0, max=6, *args, **kwargs):
         if queryset is None:
-            queryset = annotate_characters(models.Character.objects.all())
+            queryset = models.annotate_characters(models.Character.objects.all())
         super(MultipleCharactersField, self).__init__(queryset, *args, **kwargs)
         self.min_characters = min
         self.max_characters = max
