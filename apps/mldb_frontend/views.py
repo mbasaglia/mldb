@@ -131,7 +131,7 @@ def episode_metadata(episode):
         episode.title,
         episode.slug,
         links.episode_url(episode),
-        character
+        episode
     )
 
 
@@ -248,6 +248,7 @@ class Episode(MldbPage):
             models.Episode,
             id=models.Episode.make_id(self.season, self.number)
         )
+        self.title = self.episode.title
 
         self.breadcrumbs = LinkGroup([
             Episodes.link(),
@@ -307,12 +308,15 @@ class Character(MldbPage):
         super(Character, self).__init__()
 
         self.character = get_object_or_404(models.Character, name=name)
+        self.title = self.character.name
         self.breadcrumbs = LinkGroup([
             Characters.link(),
             Link(links.character_url(self.character), name),
+            Link(reverse("admin:mldb_character_change", args=[self.character.id]),
+                 "Edit", "mldb.change_character"),
         ])
 
-    def character(self, request):
+    def get(self, request):
         episodes = models.Episode.objects.order_by("id")
         episode_data = charts.DataSet(
             (
