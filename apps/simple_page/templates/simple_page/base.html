@@ -19,8 +19,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 <html>
 <head>
     <title>{{ page.site_name }} | {{ page.title }}</title>
-    {% if page.blocks.head %}
-        {% include page.blocks.head %}
+    {% if page.block_head %}
+        {% include page.block_head %}
     {% endif %}
 </head>
 <body>
@@ -29,7 +29,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         {% if page.menu %}
             <ul class="main_menu">
                 {% for link in page.menu %}
-                    <li {% if_crumb link.url "class='current_menu_item'" %}>{% link link.url link.text %}</li>
+                    <li {% if_crumb link.url "class='current_menu_item'" %}>{% link link %}</li>
                 {% endfor %}
             </ul>
         {% endif %}
@@ -37,7 +37,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         {% if page.breadcrumbs %}
             <ul class="breadcrumbs">
                 {% for link in page.breadcrumbs %}
-                    <li>{% link link.url link.text%}</li>
+                    <li>{% link link%}</li>
                 {% endfor %}
             </ul>
         {% endif %}
@@ -47,7 +47,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 <header><h1>{{ page.title }}</h1></header>
 
 <main id="contents">
-    {% include page.blocks.contents %}
+    {% include page.block_contents %}
 </main>
 
 {% if page.footer %}
@@ -57,7 +57,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             <div class="footer_title">{{ section.title }}</div>
             <ul>
                 {% for link in section.links %}
-                    <li>{% link link.url link.text %}</li>
+                    <li>{% link link %}</li>
                 {% endfor %}
             </ul>
         </nav>

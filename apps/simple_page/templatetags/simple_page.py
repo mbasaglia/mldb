@@ -26,6 +26,8 @@ from django.utils.text import slugify
 from django.utils.safestring import mark_safe
 from django.template.base import kwarg_re, TemplateSyntaxError
 
+from ..page import Link
+
 
 register = template.Library()
 
@@ -130,10 +132,17 @@ def link(context, target, text=None, **attrs):
     Renders a link.
     If the target points to the current page, it renders a span instead.
     """
+    request = context["request"]
+
+    if isinstance(target, Link):
+        if not target.visible(request):
+            return ""
+        text = target.text
+        target = target.url
+
     target = str(urllib.unquote(target))
     if text is None:
         text = target
-    request = context["request"]
 
     match = False
     if request.path == target:

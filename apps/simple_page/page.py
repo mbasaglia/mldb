@@ -19,21 +19,35 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 from django.shortcuts import render
+from django.conf.urls import url
+from django.urls import reverse_lazy
 
 
 class Link(object):
-    def __init__(self, url, text):
+    def __init__(self, url, text, condition=None):
         self.url = url
         self.text = text
+        if type(condition) is str:
+            self.condition = lambda request: request.user.has_perm("mldb.change_episode")
+        else:
+            self.condition = condition
+
+    def visible(self, request):
+        return not self.condition or self.condition(request)
 
 
 class LinkGroup(object):
     def __init__(self, title="", links=[]):
-        self.title = title
-        self.links = links
+        if type(title) is list and not links:
+            self.links = title
+            self.title = ""
+        else:
+            self.title = title
+            self.links = links
 
-    def add_link(self, link):
-        self.links.append(link)
+    def add_link(self, *links):
+        for link in links:
+            self.links.append(link)
 
     def __iter__(self):
         return iter(self.links)
@@ -53,18 +67,14 @@ class Page(object):
     base_template = template_root + "base.html"
     footer = [] # List of link groups
     menu = LinkGroup()
+    breadcrumbs = LinkGroup()
+    title = None
+    block_contents = ""
+    block_head = template_root + "inline_css.html"
 
-    def __init__(self, title, blocks):
-        self.title = title
-        self.current_page = None # Url in menu
-        self.breadcrumbs = LinkGroup()
-        if type(blocks) is str:
-            self.blocks = {
-                "contents": blocks,
-                "head": self.template_root + "inline_css.html",
-            }
-        else:
-            self.blocks = blocks # Dict block name -> template path
+    def __init__(self):
+        if self.title is None:
+            self.title = self.__class__.__name__
 
     def context(self, extra_context):
         ctx = {
@@ -87,3 +97,19 @@ class Page(object):
             for name, val in vars(object).iteritems()
             if not name.startswith("_")
         }
+
+    @classmethod
+    def slug(cls):
+        return cls.__name__.lower()
+
+    @classmethod
+    def link(cls):
+        return Link(reverse_lazy(cls.slug()), cls.title or cls.__name__)
+
+    @classmethod
+    def url_pattern(cls, pattern, *args, **kwargs):
+        return url(pattern, cls.view, name=cls.slug(), *args, **kwargs)
+
+    @classmethod
+    def view(cls, request, *args, **kwargs):
+        return cls(*args, **kwargs).get(request)

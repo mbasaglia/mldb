@@ -16,14 +16,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 {% endcomment %}
 {% load simple_page %}
 {% load charts %}
+{% load mldb %}
 
 <section>
 <header>{% section h2 %}Episodes{% endsection %}</header>
 <ol>
 {% for episode in episodes %}
-    <li>
-        <a href='{% url "episode" season=episode.season number=episode.number %}'>{{ episode.title }}</a>
-    </li>
+    <li>{% episode_link episode %}</li>
 {% endfor %}
 </ol>
 </section>

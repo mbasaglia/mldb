@@ -24,12 +24,12 @@ import views
 
 
 urlpatterns = [
-    url(r'^$', views.home, name="home"),
-    url(r'^episodes/?$', views.episodes, name="episodes"),
-    url(r'^episodes/(?P<season>[0-9]+)/?$', views.season, name="season"),
-    url(r'^episodes/(?P<season>[0-9]+)/(?P<number>[0-9]+)/?$', views.episode, name="episode"),
-    url(r'^search/?$', views.search, name="search"),
-    url(r'^characters/?$', views.characters, name="characters"),
-    url(r'^characters/compare/?$', views.compare, name="compare"),
-    url(r'^(?P<name>.*?)/?$', views.character, name="character"),
+    views.Home.url_pattern(r'^$'),
+    views.Episodes.url_pattern(r'^episodes/?$'),
+    views.Season.url_pattern(r'^episodes/(?P<season>[0-9]+)/?$'),
+    views.Episode.url_pattern(r'^episodes/(?P<season>[0-9]+)/(?P<number>[0-9]+)/?$'),
+    views.Search.url_pattern(r'^search/?$'),
+    views.Characters.url_pattern(r'^characters/?$'),
+    views.Compare.url_pattern(r'^characters/compare/?$'),
+    views.Character.url_pattern(r'^(?P<name>.*?)/?$'),
 ]

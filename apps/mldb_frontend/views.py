@@ -36,18 +36,27 @@ class MldbPage(Page):
     Page with site-specific defaults
     """
     site_name = "mldb"
-    menu = LinkGroup(site_name, [
-        Link(reverse_lazy("home"), "Home"),
-        Link(reverse_lazy("characters"), "Characters"),
-        Link(reverse_lazy("episodes"), "Episodes"),
-        Link(reverse_lazy("compare"), "Compare"),
-        Link(reverse_lazy("search"), "Search"),
-    ])
-    footer = [
-        LinkGroup(site_name, [
-            Link(reverse_lazy("home"), "Home"),
-            Link(reverse_lazy("characters"), "Characters"),
-            Link(reverse_lazy("episodes"), "Episodes"),
+
+    def __init__(self):
+        super(MldbPage, self).__init__()
+
+        if not self.block_contents:
+            self.block_contents =  "mldb/%s.html" % self.slug()
+
+        self.menu = LinkGroup(self.site_name, [
+            Home.link(),
+            Characters.link(),
+            Episodes.link(),
+            Search.link(),
+            Link(reverse_lazy("admin:index"), "Admin", lambda r: r.user.is_staff),
+        ])
+
+        self.footer = [
+        LinkGroup(self.site_name, [
+            Home.link(),
+            Characters.link(),
+            Episodes.link(),
+            Compare.link(),
         ]),
         LinkGroup("API", [
             Link(reverse_lazy("api:docs"), "Documentation"),
@@ -126,79 +135,6 @@ def episode_metadata(episode):
     )
 
 
-def home(request):
-    """
-    Homepage view
-    """
-    ctx = {
-        "n_characters": models.Character.objects.count(),
-        "n_lines": models.Line.objects.count(),
-        "n_episodes": models.Episode.objects.count(),
-        "best":  models.annotate_characters(models.Character.objects).first(),
-    }
-    ctx.update(seasons_context())
-    page = MldbPage("Home", "mldb/home.html")
-    return page.render(request, ctx)
-
-
-def episodes(request):
-    """
-    Episode list
-    """
-    ctx = seasons_context()
-    page = MldbPage("Home", "mldb/episode_list.html")
-    return page.render(request, ctx)
-
-
-def characters(request):
-    """
-    Full list of characters
-    """
-    characters = models.annotate_characters(models.Character.objects)
-    ctx = {
-        "characters": characters,
-        "character_lines_data": character_lines_data(characters),
-    }
-    page = MldbPage("Characters", "mldb/character_list.html")
-    return page.render(request, ctx)
-
-
-def character(request, name):
-    """
-    Character details
-    """
-    character = get_object_or_404(models.Character, name=name)
-    episodes = models.Episode.objects.order_by("id")
-    episode_data = charts.DataSet(
-        (
-            charts.DataPoint(
-                ep.line_set.filter(characters__in=[character]).count(),
-                *episode_metadata(ep).ctor_args()
-            )
-            for ep in episodes
-        ),
-        name,
-        character.slug
-    )
-    episodes = episodes \
-        .filter(line__characters__in=[character]) \
-        .annotate(n_lines=Count('id')) \
-        .distinct()
-
-    ctx = {
-        "character": character,
-        "episodes": episodes,
-        "line_count": sum(episodes.values_list("n_lines", flat=True)),
-        "episode_data": episode_data,
-    }
-    page = MldbPage(character.name, "mldb/character.html")
-    page.breadcrumbs.links = [
-        Link(reverse("characters"), "Characters"),
-        Link(links.character_url(character), name),
-    ]
-    return page.render(request, ctx)
-
-
 def count_lines_for(characters, episodes):
     # This query is similar to
     # .filter(line__characters__in=[character])
@@ -228,142 +164,263 @@ def get_trends_data(characters, episodes):
     )
 
 
-def season(request, season):
+class Home(MldbPage):
+    """
+    Homepage view
+    """
+    def get(self, request):
+        ctx = {
+            "n_characters": models.Character.objects.count(),
+            "n_lines": models.Line.objects.count(),
+            "n_episodes": models.Episode.objects.count(),
+            "best":  models.annotate_characters(models.Character.objects).first(),
+        }
+        ctx.update(seasons_context())
+
+        return self.render(request, ctx)
+
+
+class Episodes(MldbPage):
+    """
+    Episode list
+    """
+    block_contents = "mldb/episode_list.html"
+
+    def __init__(self):
+        super(Episodes, self).__init__()
+
+        self.breadcrumbs = LinkGroup([
+            Episodes.link(),
+            Link(reverse_lazy("admin:mldb_episode_changelist"), "Edit", "mldb.change_episode"),
+        ])
+
+    def get(self, request):
+        return self.render(request, seasons_context())
+
+
+class Season(MldbPage):
     """
     List of episodes in the given season
     """
-    season = int(season)
-    characters = models.annotate_characters(
-        models.Character.objects
-        .filter(line__episode__gt=season*100, line__episode__lt=(season+1)*100)
-    ).distinct()
+    def __init__(self, season):
+        super(Season, self).__init__()
+        self.season = int(season)
+        self.breadcrumbs = LinkGroup([
+            Episodes.link(),
+            Link(links.season_url(self.season), "Season %s" % self.season)
+        ])
+        self.title = "Season %s" % self.season
 
-    episodes = season_episodes(season)
-    cutoff = 10
+    def get(self, request):
+        characters = models.annotate_characters(
+            models.Character.objects
+            .filter(line__episode__gt=self.season*100,
+                    line__episode__lt=(self.season+1)*100)
+        ).distinct()
 
-    trends_data = get_trends_data(characters[:cutoff], episodes)
-    trends_data.rows.append(charts.MetaData("Other", "other"))
-    #import pdb; pdb.set_trace();
-    trends_data.values.append(count_lines_for(characters[cutoff:], episodes))
+        episodes = season_episodes(self.season)
+        cutoff = 10
 
-    ctx = {
-        "season": "%02i" % season,
-        "episodes": episodes,
-        "characters": characters,
-        "character_lines_data": character_lines_data(characters),
-        "trends_data": trends_data,
-    }
-    page = MldbPage("Season %s" % season, "mldb/season.html")
-    page.breadcrumbs.links = [
-        Link(reverse("episodes"), "Episodes"),
-        Link(links.season_url(season), "Season %s" % season),
-    ]
-    return page.render(request, ctx)
+        trends_data = get_trends_data(characters[:cutoff], episodes)
+        trends_data.rows.append(charts.MetaData("Other", "other"))
+        trends_data.values.append(count_lines_for(characters[cutoff:], episodes))
+
+        ctx = {
+            "season": "%02i" % self.season,
+            "episodes": episodes,
+            "characters": characters,
+            "character_lines_data": character_lines_data(characters),
+            "trends_data": trends_data,
+        }
+        return self.render(request, ctx)
 
 
-def episode(request, season, number):
+class Episode(MldbPage):
     """
     Episode details
     """
-    season = int(season)
-    number = int(number)
-    episode = get_object_or_404(
-        models.Episode,
-        id=models.Episode.make_id(season, number)
-    )
+    def __init__(self, season, number):
+        super(Episode, self).__init__()
 
-    characters = models.annotate_characters(
-        models.Character.objects.filter(line__episode=episode)
-    ).distinct()
+        self.season = int(season)
+        self.number = int(number)
+        self.episode = get_object_or_404(
+            models.Episode,
+            id=models.Episode.make_id(self.season, self.number)
+        )
 
-    ctx = {
-        "episode": episode,
-        "characters": characters,
-        "lines": models.Line.objects
-            .filter(episode=episode)
-            .prefetch_related("characters")
-            .order_by("order"),
-        "character_lines_data": character_lines_data(characters),
-        "wiki_url": settings.WIKI_BASE,
-    }
-    page = MldbPage(episode.title, "mldb/episode.html")
-    page.breadcrumbs.links = [
-        Link(reverse("episodes"), "Episodes"),
-        Link(links.season_url(season), "Season %s" % season),
-        Link(request.path, episode.title),
-    ]
-    return page.render(request, ctx)
+        self.breadcrumbs = LinkGroup([
+            Episodes.link(),
+            Link(links.season_url(self.season), "Season %s" % self.season),
+            Link(links.episode_url(self.episode), self.episode.title),
+            Link(reverse("admin:mldb_episode_change", args=[self.episode.id]),
+                 "Edit", "mldb.change_episode"),
+        ])
 
+    def get(self, request):
+        characters = models.annotate_characters(
+            models.Character.objects.filter(line__episode=self.episode)
+        ).distinct()
 
-def search(request):
-    results = None
-    pages = 0
-    curpage = 0
-    max_results = settings.SEARCH_MAX_RESULTS
-
-    if "q" in request.GET:
-        form = forms.SearchForm(request.GET)
-
-        if form.is_valid():
-            results = models.Line.objects
-
-            characters = form.cleaned_data["characters"]
-            if characters:
-                results = results.filter(characters__in=characters)
-            else:
-                results = results.all()
-            # TODO: Proper fulltext search
-            results = results.filter(text__contains=form.cleaned_data["query"])
-            pages = int(math.ceil(float(results.count()) / max_results))
-            start = max_results * curpage
-            results = results[start:start + max_results] \
-                .prefetch_related("episode")
-    else:
-        form = forms.SearchForm()
-
-    ctx = {
-        "form": form,
-        "results": results,
-        "pages": pages,
-        "curpage": curpage,
-    }
-    page = MldbPage("Search", "mldb/search.html")
-    return page.render(request, ctx)
+        ctx = {
+            "episode": self.episode,
+            "characters": characters,
+            "lines": models.Line.objects
+                .filter(episode=self.episode)
+                .prefetch_related("characters")
+                .order_by("order"),
+            "character_lines_data": character_lines_data(characters),
+            "wiki_url": settings.WIKI_BASE,
+        }
+        return self.render(request, ctx)
 
 
-def compare(request):
-    ctx = {
-        "show_results": False
-    }
-    if request.GET:
-        form = forms.CompareForm(request.GET)
-        if form.is_valid():
-            characters = form.cleaned_data["characters"]
-            episodes = form.cleaned_data["episode_range"]
-            trends_data = get_trends_data(characters, episodes)
-            lines_data = character_lines_data(characters, None)
-            if form.cleaned_data["include_other"]:
-                other_characters = models.annotate_characters(
-                    models.Character.objects.exclude(id__in=characters)
+class Characters(MldbPage):
+    """
+    Full list of characters
+    """
+    block_contents = "mldb/character_list.html"
+
+    def __init__(self):
+        super(Characters, self).__init__()
+
+        self.breadcrumbs = LinkGroup([
+            Characters.link(),
+            Compare.link(),
+            Link(reverse("admin:mldb_character_changelist"), "Edit", "mldb.change_character")
+        ])
+
+    def get(self, request):
+        characters = models.annotate_characters(models.Character.objects)
+        ctx = {
+            "characters": characters,
+            "character_lines_data": character_lines_data(characters),
+        }
+        return self.render(request, ctx)
+
+
+class Character(MldbPage):
+    """
+    Character details
+    """
+    def __init__(self, name):
+        super(Character, self).__init__()
+
+        self.character = get_object_or_404(models.Character, name=name)
+        self.breadcrumbs = LinkGroup([
+            Characters.link(),
+            Link(links.character_url(self.character), name),
+        ])
+
+    def character(self, request):
+        episodes = models.Episode.objects.order_by("id")
+        episode_data = charts.DataSet(
+            (
+                charts.DataPoint(
+                    ep.line_set.filter(characters__in=[self.character]).count(),
+                    *episode_metadata(ep).ctor_args()
                 )
-                other_characters_lines = count_lines_for(other_characters, episodes)
-                trends_data.rows.append(charts.MetaData("Other", "other"))
-                trends_data.values.append(other_characters_lines)
-                lines_data.append(charts.DataPoint(
-                    sum(other_characters_lines),
-                    "Other", "other"
-                ))
-            ctx.update({
-                "show_results": True,
-                "characters": characters,
-                "episodes": episodes,
-                "character_lines_data": lines_data,
-                "trends_data": trends_data,
-            })
-    else:
-        form = forms.CompareForm()
+                for ep in episodes
+            ),
+            self.character.name,
+            self.character.slug
+        )
+        episodes = episodes \
+            .filter(line__characters__in=[self.character]) \
+            .annotate(n_lines=Count('id')) \
+            .distinct()
 
-    ctx["form"] = form
+        ctx = {
+            "character": self.character,
+            "episodes": episodes,
+            "line_count": sum(episodes.values_list("n_lines", flat=True)),
+            "episode_data": episode_data,
+        }
+        return self.render(request, ctx)
 
-    page = MldbPage("Compare Characters", "mldb/compare.html")
-    return page.render(request, ctx)
+
+class Search(MldbPage):
+    def get(self, request):
+        results = None
+        pages = 0
+        curpage = 0
+        max_results = settings.SEARCH_MAX_RESULTS
+
+        if "q" in request.GET:
+            form = forms.SearchForm(request.GET)
+
+            if form.is_valid():
+                results = models.Line.objects
+
+                characters = form.cleaned_data["characters"]
+                if characters:
+                    results = results.filter(characters__in=characters)
+                else:
+                    results = results.all()
+                # TODO: Proper fulltext search
+                results = results.filter(text__contains=form.cleaned_data["query"])
+                pages = int(math.ceil(float(results.count()) / max_results))
+                start = max_results * curpage
+                results = results[start:start + max_results] \
+                    .prefetch_related("episode")
+        else:
+            form = forms.SearchForm()
+
+        ctx = {
+            "form": form,
+            "results": results,
+            "pages": pages,
+            "curpage": curpage,
+        }
+        return self.render(request, ctx)
+
+
+class Compare(MldbPage):
+    title = "Compare Characters"
+
+    def __init__(self):
+        super(Compare, self).__init__()
+        self.breadcrumbs = LinkGroup([
+            Characters.link(),
+            Compare.link(),
+        ])
+
+    def get(self, request):
+        ctx = {
+            "show_results": False
+        }
+        if request.GET:
+            form = forms.CompareForm(request.GET)
+            if form.is_valid():
+                characters = form.cleaned_data["characters"]
+                episodes = form.cleaned_data["episode_range"]
+                trends_data = get_trends_data(characters, episodes)
+                lines_data = character_lines_data(characters, None)
+                if form.cleaned_data["include_other"]:
+                    other_characters = models.annotate_characters(
+                        models.Character.objects.exclude(id__in=characters)
+                    )
+                    other_characters_lines = count_lines_for(other_characters, episodes)
+                    trends_data.rows.append(charts.MetaData("Other", "other"))
+                    trends_data.values.append(other_characters_lines)
+                    lines_data.append(charts.DataPoint(
+                        sum(other_characters_lines),
+                        "Other", "other"
+                    ))
+                ctx.update({
+                    "show_results": True,
+                    "characters": characters,
+                    "episodes": episodes,
+                    "character_lines_data": lines_data,
+                    "trends_data": trends_data,
+                })
+        else:
+            form = forms.CompareForm()
+
+        ctx["form"] = form
+
+        return self.render(request, ctx)
+
+    @classmethod
+    def link(cls):
+        return Link(reverse_lazy(cls.slug()), "Compare")
