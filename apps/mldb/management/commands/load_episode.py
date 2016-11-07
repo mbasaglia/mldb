@@ -61,12 +61,13 @@ class Command(BaseCommand):
             if not slug:
                 return models.Episode.objects.get(id=options["id"])
             season, number = models.Episode.split_id(options["id"])
+        else:
+            season = options["season"]
+            number = options["episode"]
 
         if options["grep"]:
             slug = self.disambiguate(slug)
 
-        season = options["season"]
-        number = options["episode"]
         if season is None:
             raise CommandError("Missing season (-s)")
         if number is None:
