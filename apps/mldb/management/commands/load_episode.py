@@ -20,21 +20,25 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import os
 from django.core.management.base import BaseCommand, CommandError
-from ... import parser
+from ... import data, models
 
 class Command(BaseCommand):
     help = 'Loads episode data'
 
     def add_arguments(self, argparser):
-        argparser.add_argument('--list', '-l', action="store_true", help="List avaliable files")
+        argparser.add_argument('--list', '-l', action="store_true",
+                               help="List avaliable files")
         argparser.add_argument('--grep', '-g', action="store_true", 
-            help="Grep mode, when present --file is an approximatation")
-        argparser.add_argument('--file', '-f', help="File path")
+            help="Grep mode, when present slug is an approximatation")
         argparser.add_argument('--season', '-s', help="Season number", type=int)
         argparser.add_argument('--episode', '-e', help="Episode number", type=int)
+        argparser.add_argument('--id', '-i', help="Episode ID", type=int)
+        argparser.add_argument('--reload', '-r', action="store_true",
+            help="Reload lines if the episode has already been loaded")
+        argparser.add_argument('slug', nargs='?', help="Episode slug")
 
     def file_names(self):
-        return os.listdir(parser.pony_lines_raw)
+        return os.listdir(data.data_lines_raw)
 
     def disambiguate(self, prompt):
         files = self.file_names()
@@ -50,24 +54,36 @@ class Command(BaseCommand):
             else:
                 raise CommandError("No match")
 
+    def get_episode(self, options):
+        slug = options["slug"]
+
+        if options["id"] is not None:
+            if not slug:
+                return models.Episode.objects.get(id=options["id"])
+            season, number = models.Episode.split_id(options["id"])
+
+        if options["grep"]:
+            slug = self.disambiguate(slug)
+
+        season = options["season"]
+        number = options["episode"]
+        if season is None:
+            raise CommandError("Missing season (-s)")
+        if number is None:
+            raise CommandError("Missing episode number (-e)")
+
+        return models.Episode.get_or_create(season, number, slug)
+
     def handle(self, *args, **options):
         if options["list"]:
             print "\n".join(self.file_names())
             return
-        elif options["file"]:
-            filename = options["file"]
-            if options["grep"]:
-                filename = self.disambiguate(filename)
-
-            if "season" not in options:
-                raise CommandError("Missing season (-s)")
-            if "episode" not in options:
-                raise CommandError("Missing episode number (-e)")
-
-            parser.load_episode(
-                os.path.join(parser.pony_lines_raw, filename),
-                options["season"],
-                options["episode"]
-            )
+        elif options["slug"] or options["id"]:
+            episode = self.get_episode(options)
+            if options["reload"]:
+                episode.line_set.all().delete()
+            elif episode.line_set.exists():
+                raise CommandError("This episode has already been loaded")
+            episode.load_lines()
         else:
             raise  CommandError("Nothing to do")

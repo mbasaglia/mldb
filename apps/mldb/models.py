@@ -19,6 +19,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import re
+import os
 import urllib
 import colorsys
 
@@ -27,6 +28,8 @@ from django.core.validators import RegexValidator
 from django.utils.functional import cached_property
 
 from unidecode import unidecode_expect_ascii as unidecode
+
+from data import data_lines_raw, parse_lines
 
 
 class Episode(models.Model):
@@ -88,6 +91,35 @@ class Episode(models.Model):
 
     def __unicode__(self):
         return "%s %s" % (self.formatted_id, self.title)
+
+    @classmethod
+    def get_or_create(cls, season, number, slug):
+        return cls.objects.get_or_create(
+            id=cls.make_id(season, number),
+            defaults={
+                "slug": slug,
+                "title": Episode.slug_to_title(slug)
+            }
+        )
+
+    def load_lines(self, filename=None):
+        """
+        Loads all lines from a file relating to this episode
+        """
+        line_objects = []
+        with open(filename or os.path.join(data_lines_raw, self.slug)) as file:
+            order = 0
+            for names, text in parse_lines(file):
+                line_objects.append((
+                    Line(episode=self, order=order, text=text),
+                    Character.get_or_create_all(names)
+                ))
+                order += 1
+
+        Line.objects.bulk_create([obj[0] for obj in line_objects])
+        new_lines = Line.objects.filter(episode=self).order_by("order")
+        for obj in line_objects:
+            new_lines[obj[0].order].characters.add(*obj[1])
 
 
 def ColorField(*args, **kwargs):
