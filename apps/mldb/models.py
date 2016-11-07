@@ -151,7 +151,7 @@ class Character(models.Model):
     slug = models.CharField(max_length=128, unique=True, blank=False)
     color = ColorField(default='#ffffff')
     outline = ColorField(default='#cccccc')
-    aliases = models.ManyToManyField(CharacterAlias)
+    aliases = models.ManyToManyField(CharacterAlias, blank=True)
 
     @staticmethod
     def name_to_slug(name):

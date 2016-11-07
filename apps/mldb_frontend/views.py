@@ -151,7 +151,7 @@ def count_lines_for(characters, episodes):
 
 def get_trends_data(characters, episodes):
     """
-    Returnds a data matrix mapping episodes * characters to number of lines
+    Returns a data matrix mapping episodes * characters to number of lines
     """
     return charts.DataMatrix(
         [

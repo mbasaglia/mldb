@@ -124,68 +124,144 @@ class DataMatrix(object):
         self.columns = columns
         self.values = values
 
-    def _adjust_maximum(self, data, global_maximum):
-        if global_maximum:
-            max_lines = max(ds.max for ds in data)
-            for ds in data:
-                ds.max = max_lines
-        return data
+    def data_view(self):
+        return MatrixView(self)
 
-    def data_by_row(self, global_maximum=False):
-        """
-        Returns a row-wise view of the data
-        \param global_maximum Whether to alter dataset maximums to reflect the
-                              maximum value in the whole data matrix
+    def transposed_view(self):
+        return TransposedMatrixView(self)
 
-        Each DataSet represents a row,
-        and each DataPoint a value associated with a column
-        """
-        data = [
-            DataSet(
-                [
-                    DataPoint(value, *column.ctor_args())
-                    for column, value in zip(self.columns, row_values)
-                ],
-                *row.ctor_args()
-            )
-            for row, row_values in zip(self.rows, self.values)
-        ]
 
-        return self._adjust_maximum(data, global_maximum)
+class MatrixView(object):
+    def __init__(self, data_matrix):
+        self.data_matrix = data_matrix
 
-    def data_by_column(self, global_maximum=False):
-        """
-        Returns a column-wise view of the data
-        \param global_maximum Whether to alter dataset maximums to reflect the
-                              maximum value in the whole data matrix
+    @property
+    def records(self):
+        return self.data_matrix.rows
 
-        Each DataSet represents a column,
-        and each DataPoint a value associated with a row
-        """
-        data = [
-            DataSet(
-                [
-                    DataPoint(row_values[x], *row.ctor_args())
-                    for row, row_values in zip(self.rows, self.values)
-                ],
-                *column.ctor_args()
-            )
-            for x, column in enumerate(self.columns)
-        ]
+    @property
+    def items(self):
+        return self.data_matrix.columns
 
-        return self._adjust_maximum(data, global_maximum)
+    def __call__(self, record_id, item_id):
+        return self.data_matrix.values[record_id][item_id]
 
-    def data_by_row_global_max(self):
-        """
-        Helper for simpler use in templates
-        """
-        return self.data_by_row(True)
+    @property
+    def enumerated_items(self):
+        return enumerate(self.items)
 
-    def data_by_column_global_max(self):
-        """
-        Helper for simpler use in templates
-        """
-        return self.data_by_column(True)
+    @property
+    def enumerated_records(self):
+        return enumerate(self.records)
+    @property
+    def range_items(self):
+        return xrange(len(self.items))
+
+    @property
+    def range_records(self):
+        return xrange(len(self.records))
+
+    def record_dataset(self, index):
+        record = self.records[index]
+        return DataSet(
+            [
+                DataPoint(
+                    self(index, item_id),
+                    *self.items[item_id].ctor_args()
+                )
+                for item_id in self.range_items
+            ],
+            *record.ctor_args()
+        )
+
+    def item_dataset(self, index):
+        item = self.items[index]
+        return DataSet(
+            [
+                DataPoint(
+                    self(record_id, index),
+                    *self.items[record_id].ctor_args()
+                )
+                for record_id in self.range_records
+            ],
+            *item.ctor_args()
+        )
+
+    def max_value(self):
+        return max(max(self.data_matrix.values))
+
+    @property
+    def transposed(self):
+        return TransposedMatrixView(self.data_matrix)
+
+
+class TransposedMatrixView(MatrixView):
+    @property
+    def records(self):
+        return self.data_matrix.columns
+
+    @property
+    def items(self):
+        return self.data_matrix.rows
+
+    def __call__(self, record_id, item_id):
+        return self.data_matrix.values[item_id][record_id]
+
+    @property
+    def transposed(self):
+        return MatrixView(self.data_matrix)
+
+
+class MatrixViewSingleRecord(MatrixView):
+    def __init__(self, data_set):
+        self.data_set = data_set
+
+    @property
+    def records(self):
+        return [self.data_set]
+
+    @property
+    def items(self):
+        return self.data_set
+
+    def __call__(self, record_id, item_id):
+        return self.data_set[item_id].value
+
+    def max_value(self):
+        return self.data_set.max
+
+    def record_dataset(self, index):
+        return self.data_set
+
+    @property
+    def transposed(self):
+        return MatrixViewSingleItem(self.data_set)
+
+
+class MatrixViewSingleItem(MatrixView):
+    def __init__(self, data_set):
+        self.data_set = data_set
+
+    @property
+    def records(self):
+        return self.data_set
+
+    @property
+    def items(self):
+        return [self.data_set]
+
+    def __call__(self, record_id, item_id):
+        return self.data_set[record_id].value
+
+    def max_value(self):
+        return self.data_set.max
+
+    def item_dataset(self, index):
+        return self.data_set
+
+    @property
+    def transposed(self):
+        return MatrixViewSingleRecord(self.data_set)
 
 
 class SvgPoint(object):
@@ -398,7 +474,6 @@ class LineChart(LineChartBase):
         class_prefix=default_prefix,
         attrs={}
     ):
-
         return mark_safe("<g %s>%s%s</g>" % (
             make_attrs(attrs),
             self.render_line(data_set, {}, id_prefix, class_prefix),
@@ -407,19 +482,21 @@ class LineChart(LineChartBase):
 
     def render(
         self,
-        data_set_list,
+        data,
         point_radius=0,
         grid_class="grid",
         trace_class="line_data",
         id_prefix=default_prefix,
         class_prefix=default_prefix
     ):
-        if isinstance(data_set_list, DataSet):
-            data_set_list = [data_set_list]
+        if isinstance(data, DataSet):
+            data = MatrixViewSingleItem(data)
 
-        size = len(data_set_list[0]) if data_set_list else 1
-        svg = self.render_hgrid(size, {"class": grid_class})
-        for data_set in reversed(data_set_list):
+        svg = self.render_hgrid(len(data.records), {"class": grid_class})
+        global_max = data.max_value()
+        for item_id in reversed(data.range_items):
+            data_set = data.item_dataset(item_id)
+            data_set.max = global_max
             svg += self.render_data_trace(
                 data_set,
                 point_radius,
@@ -501,13 +578,11 @@ class StackedBarChart(object):
             height=1
         )
 
-    def render(self, data_set_list, class_prefix=default_prefix):
-        if isinstance(data_set_list, DataSet):
-            data_set_list = [data_set_list]
+    def render(self, data, class_prefix=default_prefix):
         bars = ""
-        for index, data_set in enumerate(data_set_list):
-            subrect = self._subrect(index, len(data_set_list))
-            bars += self.render_bar(data_set, subrect, class_prefix)
+        for index in data.range_records:
+            subrect = self._subrect(index, len(data.records))
+            bars += self.render_bar(data.record_dataset(index), subrect, class_prefix)
         return mark_safe(bars)
 
 
@@ -534,15 +609,14 @@ class StackedLineChart(LineChartBase):
             )
         )
 
-    def render(self, data_matrix, circle_width=0, class_prefix=default_prefix):
+    def render(self, data, circle_width=0, class_prefix=default_prefix):
+        accumulate = [[0] * len(data.items) for i in data.range_records]
         global_max = 0
-        ncols = len(data_matrix.columns)
-        accumulate = [[0] * ncols for i in xrange(len(data_matrix.rows))]
-        for ci in xrange(ncols):
+        for r_id in data.range_records:
             total = 0
-            for ri in xrange(len(data_matrix.rows)):
-                accumulate[ri][ci] = total
-                total +=  data_matrix.values[ri][ci]
+            for it_id in data.range_items:
+                accumulate[r_id][it_id] = total
+                total +=  data(r_id, it_id)
             if total > global_max:
                 global_max = total
         global_max = float(global_max)
@@ -550,38 +624,38 @@ class StackedLineChart(LineChartBase):
         svg_paths = ""
         svg_points = ""
 
-        for ri, row in reversed(list(enumerate(data_matrix.rows))):
-            start = self._value_point(accumulate[ri][0] / global_max, 0, ncols)
+        for it_id, item in reversed(list(data.enumerated_items)):
+            start = self._value_point(accumulate[0][it_id] / global_max, 0, len(data.records))
             path = "M %s L " % start
             circles = ""
-            for ci, column in enumerate(data_matrix.columns):
-                value =  data_matrix.values[ri][ci]
-                point_y = (value + accumulate[ri][ci]) / global_max
-                point = self._value_point(point_y, ci, ncols)
+            for r_id, record in data.enumerated_records:
+                value =  data(r_id, it_id)
+                point_y = (value + accumulate[r_id][it_id]) / global_max
+                point = self._value_point(point_y, r_id, len(data.records))
                 path += str(point) + " "
                 if value:
-                    circles += self._render_circle(point, circle_width, column, value)
-            for ci in reversed(xrange(ncols)):
-                point_y = accumulate[ri][ci] / global_max
-                point = self._value_point(point_y, ci, ncols)
+                    circles += self._render_circle(point, circle_width, record, value)
+            for r_id in reversed(data.range_records):
+                point_y = accumulate[r_id][it_id] / global_max
+                point = self._value_point(point_y, r_id, len(data.records))
                 path += str(point) + " "
 
             if circles:
                 svg_points += "<g class='%s'>%s</g>\n" % (
-                    escape(class_prefix + row.id),
+                    escape(class_prefix + item.id),
                     circles
                 )
 
-            svg_paths += row.wrap_link(
+            svg_paths += item.wrap_link(
                 "<path class='%s' d='%s'><title>%s</title></path>\n" % (
-                    escape(class_prefix + row.id),
+                    escape(class_prefix + item.id),
                     path,
-                    row.label
+                    item.label
                 )
             )
 
         return mark_safe(
             svg_paths +
-            self.render_hgrid(ncols, {"class": "grid"}) +
+            self.render_hgrid(len(data.records), {"class": "grid"}) +
             svg_points
         )
