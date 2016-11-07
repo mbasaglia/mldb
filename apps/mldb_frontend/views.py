@@ -99,18 +99,18 @@ def seasons_context():
     }
 
 
-def character_lines_data(queryset, cutoff=10):
+def character_lines_data(detailed, other=None):
     """
     Retrieves the chart dataset from the queryset
     """
     character_lines_data = charts.DataSet(
         charts.DataPoint(ch.n_lines, *character_metadata(ch).ctor_args())
-        for ch in queryset[0:cutoff]
+        for ch in detailed
     )
 
-    if cutoff and queryset.count() > cutoff:
+    if other is not None:
         character_lines_data.append(charts.DataPoint(
-            queryset[cutoff:].aggregate(Sum("n_lines"))["n_lines__sum"],
+            sum(ch.n_lines for ch in other),
             "Other", "other"
         ))
 
@@ -140,11 +140,13 @@ def count_lines_for(characters, episodes):
     # .filter(line__characters__in=[character])
     # .annotate(n_lines=Count("line__id"))
     # but it keeps all of the episodes, even without matchin lines
-    return episodes.annotate(n_lines=Sum(Case(
-                When(line__characters__in=list(characters), then=Value(1)),
-                default=Value(0),
-                output_field=IntegerField()
-            ))).values_list("n_lines", flat=True)
+    return list(
+        episodes.annotate(n_lines=Sum(Case(
+            When(line__characters__in=list(characters), then=Value(1)),
+            default=Value(0),
+            output_field=IntegerField()
+        ))).values_list("n_lines", flat=True)
+    )
 
 
 def get_trends_data(characters, episodes):
@@ -152,7 +154,10 @@ def get_trends_data(characters, episodes):
     Returnds a data matrix mapping episodes * characters to number of lines
     """
     return charts.DataMatrix(
-        [ character_metadata(character) for character in characters ],
+        [
+            character_metadata(character)
+            for character in characters
+        ],
         [
             episode_metadata(episode)
             for episode in episodes
@@ -162,6 +167,9 @@ def get_trends_data(characters, episodes):
             for character in characters
         ]
     )
+
+def cutoff(characters, threshold=10):
+    return characters[:threshold], characters[threshold:]
 
 
 class Home(MldbPage):
@@ -219,17 +227,18 @@ class Season(MldbPage):
         ).distinct()
 
         episodes = season_episodes(self.season)
-        cutoff = 10
+        characters = list(characters)
+        detailed, other = cutoff(characters)
 
-        trends_data = get_trends_data(characters[:cutoff], episodes)
+        trends_data = get_trends_data(detailed, episodes)
         trends_data.rows.append(charts.MetaData("Other", "other"))
-        trends_data.values.append(count_lines_for(characters[cutoff:], episodes))
+        trends_data.values.append(count_lines_for(other, episodes))
 
         ctx = {
             "season": "%02i" % self.season,
             "episodes": episodes,
             "characters": characters,
-            "character_lines_data": character_lines_data(characters),
+            "character_lines_data": character_lines_data(detailed, other),
             "trends_data": trends_data,
         }
         return self.render(request, ctx)
@@ -259,9 +268,11 @@ class Episode(MldbPage):
         ])
 
     def get(self, request):
-        characters = models.annotate_characters(
+        characters = list(models.annotate_characters(
             models.Character.objects.filter(line__episode=self.episode)
-        ).distinct()
+        ).distinct())
+
+        detailed, other = cutoff(characters)
 
         ctx = {
             "episode": self.episode,
@@ -270,7 +281,7 @@ class Episode(MldbPage):
                 .filter(episode=self.episode)
                 .prefetch_related("characters")
                 .order_by("order"),
-            "character_lines_data": character_lines_data(characters),
+            "character_lines_data": character_lines_data(detailed, other),
             "wiki_url": settings.WIKI_BASE,
         }
         return self.render(request, ctx)
@@ -292,10 +303,12 @@ class Characters(MldbPage):
         ])
 
     def get(self, request):
-        characters = models.annotate_characters(models.Character.objects)
+        characters = list(models.annotate_characters(models.Character.objects))
+        detailed, other = cutoff(characters)
+
         ctx = {
             "characters": characters,
-            "character_lines_data": character_lines_data(characters),
+            "character_lines_data": character_lines_data(detailed, other),
         }
         return self.render(request, ctx)
 
@@ -396,7 +409,7 @@ class Compare(MldbPage):
         if request.GET:
             form = forms.CompareForm(request.GET)
             if form.is_valid():
-                characters = form.cleaned_data["characters"]
+                characters = list(form.cleaned_data["characters"])
                 episodes = form.cleaned_data["episode_range"]
                 trends_data = get_trends_data(characters, episodes)
                 lines_data = character_lines_data(characters, None)
@@ -414,7 +427,7 @@ class Compare(MldbPage):
                 ctx.update({
                     "show_results": True,
                     "characters": characters,
-                    "episodes": episodes,
+                    "episodes": list(episodes),
                     "character_lines_data": lines_data,
                     "trends_data": trends_data,
                 })
