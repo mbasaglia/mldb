@@ -295,26 +295,53 @@ class PieChart(object):
         return mark_safe(slices)
 
 
-class LineChart(object):
-    default_prefix = "line_chart_"
-
+class LineChartBase(object):
     def __init__(self, rect):
         self.rect = rect
 
-    def relpoint(self, percent_x, percent_y):
+    def point_rel2abs(self, point):
+        """
+        Converts a relative/normalize point into an absolute point
+        """
         return SvgPoint(
-            self.rect.x + self.rect.width * percent_x,
-            self.rect.y + self.rect.height * (1 - percent_y),
+            self.rect.x + self.rect.width * point.x,
+            self.rect.y + self.rect.height * (1 - point.y),
         )
+
+    def _value_point(self, percent, index, size):
+        """
+        Returns an absolute point based on a data value
+        """
+        return self.point_rel2abs(SvgPoint(
+            0 if size < 2 else float(index) / (size - 1),
+            percent
+        ))
+
+    def render_hgrid(self, steps, attrs):
+        attrs["d"] = " ".join(
+            "M %s L %s" % (
+                self._value_point(0, i, steps),
+                self._value_point(1, i, steps),
+            )
+            for i in range(steps)
+        )
+        return mark_safe(
+            "<path %s/>" % (
+            make_attrs(attrs),
+        ))
+
+
+class LineChart(LineChartBase):
+    default_prefix = "line_chart_"
+
+    def __init__(self, rect):
+        super(LineChart, self).__init__(rect)
 
     def points(self, data):
         return [
-            self.relpoint(self._rel_x(index, len(data)), data_point.normalized)
+            self._value_point(data_point.normalized, index, len(data))
             for index, data_point in enumerate(data)
         ]
-
-    def _rel_x(self, index, size):
-        return 0 if size < 2 else float(index) / (size - 1)
 
     def render_line(self, data, attrs, id_prefix=default_prefix,
                     class_prefix=default_prefix):
@@ -338,43 +365,29 @@ class LineChart(object):
         return "%s (%s)" % (point.label, point.value)
 
     def _circlepoint(self, index, data, percent):
-
-        point = self.relpoint(
-            self._rel_x(index, len(data)),
-            percent
-        )
+        point = self._value_point(percent, index, len(data))
         return "cx='%s' cy='%s'" % (point.x, point.y)
+
+    def _svg_circle(self, data, index, point, attrstring):
+        return point.wrap_link(
+            "<circle %s data-value='%s' data-name='%s' %s>"
+            "<title>%s</title>"
+            "</circle>" % (
+                self._circlepoint(index, data, point.normalized),
+                point.value,
+                point.label,
+                attrstring,
+                self.format_title(point),
+            )
+        )
 
     def render_points(self, data, attrs, class_prefix=default_prefix):
         if data.id:
             attrs["class"] = class_prefix + data.id
         attrstring = make_attrs(attrs)
         return mark_safe("\n".join(
-            point.wrap_link(
-                "<circle %s data-value='%s' data-name='%s' %s>"
-                "<title>%s</title>"
-                "</circle>" % (
-                    self._circlepoint(index, data, point.normalized),
-                    point.value,
-                    point.label,
-                    attrstring,
-                    self.format_title(point),
-                )
-            )
+            self._svg_circle(data, index, point, attrstring)
             for index, point in enumerate(data)
-        ))
-
-    def render_hgrid(self, steps, attrs):
-        attrs["d"] = " ".join(
-            "M %s L %s" % (
-                self.relpoint(self._rel_x(i, steps), 0),
-                self.relpoint(self._rel_x(i, steps), 1),
-            )
-            for i in range(steps)
-        )
-        return mark_safe(
-            "<path %s/>" % (
-            make_attrs(attrs),
         ))
 
     def render_data_trace(
@@ -385,6 +398,7 @@ class LineChart(object):
         class_prefix=default_prefix,
         attrs={}
     ):
+
         return mark_safe("<g %s>%s%s</g>" % (
             make_attrs(attrs),
             self.render_line(data_set, {}, id_prefix, class_prefix),
@@ -405,7 +419,7 @@ class LineChart(object):
 
         size = len(data_set_list[0]) if data_set_list else 1
         svg = self.render_hgrid(size, {"class": grid_class})
-        for data_set in data_set_list:
+        for data_set in reversed(data_set_list):
             svg += self.render_data_trace(
                 data_set,
                 point_radius,
@@ -495,3 +509,79 @@ class StackedBarChart(object):
             subrect = self._subrect(index, len(data_set_list))
             bars += self.render_bar(data_set, subrect, class_prefix)
         return mark_safe(bars)
+
+
+class StackedLineChart(LineChartBase):
+    default_prefix = "stacked_line_chart_"
+
+    def __init__(self, rect):
+        super(StackedLineChart, self).__init__(rect)
+
+    def format_title(self, metadata, value):
+        return "%s (%s)" % (metadata.label, value)
+
+    def _render_circle(self, point, radius, metadata, value):
+        return metadata.wrap_link(
+            "<circle cx='%s' cy='%s' r='%s' data-value='%s' data-name='%s'>"
+            "<title>%s</title>"
+            "</circle>" % (
+                point.x,
+                point.y,
+                radius,
+                value,
+                metadata.label,
+                self.format_title(metadata, value),
+            )
+        )
+
+    def render(self, data_matrix, circle_width=0, class_prefix=default_prefix):
+        global_max = 0
+        ncols = len(data_matrix.columns)
+        accumulate = [[0] * ncols for i in xrange(len(data_matrix.rows))]
+        for ci in xrange(ncols):
+            total = 0
+            for ri in xrange(len(data_matrix.rows)):
+                accumulate[ri][ci] = total
+                total +=  data_matrix.values[ri][ci]
+            if total > global_max:
+                global_max = total
+        global_max = float(global_max)
+
+        svg_paths = ""
+        svg_points = ""
+
+        for ri, row in reversed(list(enumerate(data_matrix.rows))):
+            start = self._value_point(accumulate[ri][0] / global_max, 0, ncols)
+            path = "M %s L " % start
+            circles = ""
+            for ci, column in enumerate(data_matrix.columns):
+                value =  data_matrix.values[ri][ci]
+                point_y = (value + accumulate[ri][ci]) / global_max
+                point = self._value_point(point_y, ci, ncols)
+                path += str(point) + " "
+                if value:
+                    circles += self._render_circle(point, circle_width, column, value)
+            for ci in reversed(xrange(ncols)):
+                point_y = accumulate[ri][ci] / global_max
+                point = self._value_point(point_y, ci, ncols)
+                path += str(point) + " "
+
+            if circles:
+                svg_points += "<g class='%s'>%s</g>\n" % (
+                    escape(class_prefix + row.id),
+                    circles
+                )
+
+            svg_paths += row.wrap_link(
+                "<path class='%s' d='%s'><title>%s</title></path>\n" % (
+                    escape(class_prefix + row.id),
+                    path,
+                    row.label
+                )
+            )
+
+        return mark_safe(
+            svg_paths +
+            self.render_hgrid(ncols, {"class": "grid"}) +
+            svg_points
+        )

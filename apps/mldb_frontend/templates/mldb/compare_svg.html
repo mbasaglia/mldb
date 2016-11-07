@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 {% load charts %}
 
 <figure>
-    <figcaption>Character Trends</figcaption>
+    <figcaption>Individual Character Trends</figcaption>
     <svg xmlns="http://www.w3.org/2000/svg"
         xmlns:xlink="http://www.w3.org/1999/xlink"
         width="600" height="300"
@@ -37,12 +37,22 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             svg {
                 stroke-width: 2px;
             }
-            .line_chart .grid {
+            .grid {
                 stroke: silver;
                 stroke-dasharray: 2, 5;
             }
         </style>
-        {% line_chart trends_data.data_by_row_global_max "600" "300" "4" class_prefix="character_" %}
+        {% line_chart trends_data.data_by_row_global_max 600 300 4 class_prefix="character_" %}
+    </svg>
+</figure>
+<figure>
+    <figcaption>Total lines</figcaption>
+    <svg xmlns="http://www.w3.org/2000/svg"
+        xmlns:xlink="http://www.w3.org/1999/xlink"
+        width="600" height="300"
+        viewBox="-6 -6 612 312"
+        class="stacked_line_chart">
+        {% stacked_line_chart trends_data 600 300 4 class_prefix="character_" %}
     </svg>
 </figure>
 <figure>
@@ -52,6 +62,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         width="600" height="300"
         viewBox="-2 -2 604 304"
         class="stacked_chart">
-        {% stacked_bar_chart trends_data.data_by_column "600" "300" class_prefix="character_" %}
+        {% stacked_bar_chart trends_data.data_by_column 600 300 class_prefix="character_" %}
     </svg>
 </figure>

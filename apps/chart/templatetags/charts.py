@@ -40,3 +40,9 @@ def line_chart(data, width, height, *args, **kwargs):
 def stacked_bar_chart(dataset_list, width, height, separation=1, *args, **kwargs):
     rect = charts.SvgRect(0, 0, float(width), float(height))
     return charts.StackedBarChart(rect, separation).render(dataset_list, *args, **kwargs)
+
+
+@register.simple_tag
+def stacked_line_chart(data_matrix, width, height, *args, **kwargs):
+    rect = charts.SvgRect(0, 0, float(width), float(height))
+    return charts.StackedLineChart(rect).render(data_matrix, *args, **kwargs)

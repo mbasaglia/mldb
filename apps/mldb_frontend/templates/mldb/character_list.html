@@ -23,11 +23,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         width="300" height="300"
         viewBox="-2 -2 304 304">
         <style>
-        {% for character in characters %}
-            .character_{{ character.slug }} {
-                fill: {{ character.color }};
-                stroke: {{ character.outline }};
-            }
+            {% for character in characters %}
+                .character_{{ character.slug }} {
+                    fill: {{ character.color }};
+                    stroke: {{ character.outline }};
+                }
+            {% endfor %}
             .character_other {
                 fill: silver;
                 stroke: gray;
@@ -35,7 +36,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             svg {
                 stroke-width: 2px;
             }
-        {% endfor %}
         </style>
         {% pie_chart character_lines_data "150" class_prefix="character_" %}
     </svg>
