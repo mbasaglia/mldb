@@ -180,7 +180,7 @@ class MatrixView(object):
             [
                 DataPoint(
                     self(record_id, index),
-                    *self.items[record_id].ctor_args()
+                    *self.records[record_id].ctor_args()
                 )
                 for record_id in self.range_records
             ],

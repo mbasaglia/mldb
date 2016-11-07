@@ -40,7 +40,7 @@ class CharacterAdmin(admin.ModelAdmin):
             border: 3px solid %s;
             width: 16px;
             height: 16px;
-        '></div>""" % (obj.color, obj.outline)
+        '></div>""".replace("\n", "") % (obj.color, obj.outline)
     color_field.allow_tags = True
     color_field.short_description = 'Color'
 
