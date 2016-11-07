@@ -21,15 +21,28 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from django.contrib import admin
 from django import forms
 from django.contrib.admin.widgets import FilteredSelectMultiple
+from django.db.models import Count
 from . import models
 
 
 class CharacterAdmin(admin.ModelAdmin):
-    filter_horizontal = ('aliases',)
+    filter_horizontal = ("aliases",)
+    search_fields = ("name", )
+    list_display = ("name", "color_field",)
 
     def get_queryset(self, request):
         queryset = super(CharacterAdmin, self).get_queryset(request)
         return models.annotate_characters(queryset)
+
+    def color_field(self, obj):
+        return """<div style='
+            background: %s;
+            border: 3px solid %s;
+            width: 16px;
+            height: 16px;
+        '></div>""" % (obj.color, obj.outline)
+    color_field.allow_tags = True
+    color_field.short_description = 'Color'
 
 
 class CharacterAliasAdminForm(forms.ModelForm):
@@ -62,11 +75,40 @@ class CharacterAliasAdminForm(forms.ModelForm):
         return character_alias
 
 
+def has_reverse_key_filter(relation):
+
+    class HasReverseKeyFilter(admin.SimpleListFilter):
+        title = "Has related %s" % relation
+        parameter_name = relation
+
+        def lookups(self, request, model_admin):
+            return (
+                (1, "Yes"),
+                (0, "No"),
+            )
+
+        def queryset(self, request, queryset):
+            if self.value() is None:
+                return queryset
+            annotated = queryset.annotate(count=Count(relation))
+            value = int(self.value())
+            if value == 1:
+                return annotated.filter(count__gt=0)
+            elif value == 0:
+                return annotated.filter(count=0)
+            return annotated
+    return HasReverseKeyFilter
+
+
 class CharacterAliasAdmin(admin.ModelAdmin):
     form = CharacterAliasAdminForm
+    list_filter = (has_reverse_key_filter("character"),)
 
 
-admin.site.register(models.Episode)
+class EpisodeAdmin(admin.ModelAdmin):
+    ordering = ("id",)
+
+admin.site.register(models.Episode, EpisodeAdmin)
 admin.site.register(models.Character, CharacterAdmin)
 admin.site.register(models.Line)
 admin.site.register(models.CharacterAlias, CharacterAliasAdmin)
