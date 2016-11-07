@@ -100,7 +100,7 @@ class Episode(models.Model):
                 "slug": slug,
                 "title": Episode.slug_to_title(slug)
             }
-        )
+        )[0]
 
     def load_lines(self, filename=None):
         """
