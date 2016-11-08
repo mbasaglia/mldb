@@ -380,14 +380,20 @@ class ChartBase(object):
     """
     Base class for graphs
     """
-    def __init__(self, rect, normalized):
+    def __init__(self, rect, padding, normalized):
         """
         \param rect         SvgRect for the bounding box of the rendered data
         \param normalized   Whether the total of a record is to be considered as 100%
-        \note The rendered area might be larger than \p rect due to decorations and borders
+        \param padding      Extra space to leave around \p rect
         """
         self.rect = rect
         self.normalized = normalized
+        self.rect = SvgRect(
+            self.rect.x + padding,
+            self.rect.y + padding,
+            self.rect.width - padding * 2,
+            self.rect.height - padding * 2,
+        )
 
     def format_title(self, point, total):
         """
@@ -504,14 +510,14 @@ class PieChart(ChartBase):
     """
     Pie chart
     """
-    def __init__(self, rect, radius=None, angle_start=0):
+    def __init__(self, rect, padding=0, radius=None, angle_start=0):
         """
         \param radius        Radius of the chart (in svg user units)
         \param center        A SvgPoint
         \param angle_start   Starting angle (in radians)
         """
-        super(PieChart, self).__init__(rect, True)
-        self.radius = radius if radius else min(rect.width, rect.height) / 2.0
+        super(PieChart, self).__init__(rect, padding, True)
+        self.radius = radius if radius else min(self.rect.width, self.rect.height) / 2.0
         self.center = self.rect.center
         self.angle_start = angle_start
 
@@ -615,8 +621,8 @@ class LineChart(LineChartBase):
     """
     default_prefix = "line_chart_"
 
-    def __init__(self, rect):
-        super(LineChart, self).__init__(rect, False)
+    def __init__(self, rect, padding=0):
+        super(LineChart, self).__init__(rect, padding, False)
 
     def points(self, data_set, max):
         """
@@ -689,7 +695,7 @@ class LineChart(LineChartBase):
 class StackedBarChart(ChartBase):
     default_prefix = "stacked_bar_chart_"
 
-    def __init__(self, rect, normalized=False, separation=1):
+    def __init__(self, rect, padding=0, normalized=False, separation=1):
         super(StackedBarChart, self).__init__(rect, normalized)
         self.separation = separation
 
@@ -750,8 +756,8 @@ class StackedBarChart(ChartBase):
 class StackedLineChart(LineChartBase):
     default_prefix = "stacked_line_chart_"
 
-    def __init__(self, rect, normalized=False):
-        super(StackedLineChart, self).__init__(rect, normalized)
+    def __init__(self, rect, padding=0, normalized=False):
+        super(StackedLineChart, self).__init__(rect, padding, normalized)
 
     # TODO Clean up this ugly function
     def render(self, data, options=RenderOptions()):

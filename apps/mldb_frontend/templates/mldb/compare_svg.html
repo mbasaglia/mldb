@@ -22,9 +22,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     <svg xmlns="http://www.w3.org/2000/svg"
         xmlns:xlink="http://www.w3.org/1999/xlink"
         width="600" height="300"
-        viewBox="-6 -6 612 312"
         class="line_chart">
-        {% line_chart trends_data.transposed_view 600 300 r=4 class_prefix="character_" %}
+        {% line_chart trends_data.transposed_view 600 300 6 r=4 class_prefix="character_" %}
     </svg>
 </figure>
 <figure>
@@ -32,9 +31,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     <svg xmlns="http://www.w3.org/2000/svg"
         xmlns:xlink="http://www.w3.org/1999/xlink"
         width="600" height="300"
-        viewBox="-6 -6 612 312"
         class="stacked_line_chart">
-        {% stacked_line_chart trends_data.transposed_view 600 300 False r=4 class_prefix="character_" %}
+        {% stacked_line_chart trends_data.transposed_view 600 300 6 False r=4 class_prefix="character_" %}
     </svg>
 </figure>
 <figure>
@@ -42,8 +40,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     <svg xmlns="http://www.w3.org/2000/svg"
         xmlns:xlink="http://www.w3.org/1999/xlink"
         width="600" height="300"
-        viewBox="-6 -6 612 312"
         class="stacked_line_chart">
-        {% stacked_line_chart trends_data.transposed_view 600 300 True r=4 class_prefix="character_" %}
+        {% stacked_line_chart trends_data.transposed_view 600 300 6 True r=4 class_prefix="character_" %}
     </svg>
 </figure>
