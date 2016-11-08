@@ -18,6 +18,9 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+import re
+import inspect
+
 from django import template
 
 from .. import charts
@@ -25,26 +28,12 @@ from .. import charts
 
 register = template.Library()
 
-@register.simple_tag
-def pie_chart(data, radius, *args, **kwargs):
-    return charts.PieChart(float(radius)).render(data, *args, **kwargs)
+def is_chart_type(obj):
+    return inspect.isclass(obj) and \
+           issubclass(obj, charts.ChartBase) and \
+           obj not in charts.abstract
 
-
-@register.simple_tag
-def line_chart(data, width, height, *args, **kwargs):
-    rect = charts.SvgRect(0, 0, float(width), float(height))
-    return charts.LineChart(rect).render(data, *args, **kwargs)
-
-
-@register.simple_tag
-def stacked_bar_chart(data_matrix, width, height, normalized=False, separation=1, *args, **kwargs):
-    rect = charts.SvgRect(0, 0, float(width), float(height))
-    return charts.StackedBarChart(rect, normalized, separation) \
-        .render(data_matrix, *args, **kwargs)
-
-
-@register.simple_tag
-def stacked_line_chart(data_matrix, width, height, normalized=False, *args, **kwargs):
-    rect = charts.SvgRect(0, 0, float(width), float(height))
-    return charts.StackedLineChart(rect, normalized) \
-        .render(data_matrix, *args, **kwargs)
+for name, member in inspect.getmembers(charts):
+    if is_chart_type(member):
+        snake_name = re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()
+        register.simple_tag(member.template_tag(), name=snake_name)
