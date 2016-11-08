@@ -73,16 +73,17 @@ class CompareForm(forms.Form):
 
     def clean(self):
         data = super(CompareForm, self).clean()
-        episode_start = data["episode_start"]
-        episode_finish = data["episode_finish"]
+        if "episode_start" in data and "episode_finish" in data:
+            episode_start = data["episode_start"]
+            episode_finish = data["episode_finish"]
 
-        if episode_finish.id < episode_start.id:
-            temp = episode_start.id
-            episode_start = episode_finish
-            episode_finish = temp
+            if episode_finish.id < episode_start.id:
+                temp = episode_start.id
+                episode_start = episode_finish
+                episode_finish = temp
 
-        data["episode_range"] = models.Episode.objects.filter(
-            id__gte=episode_start.id,
-            id__lte=episode_finish.id,
-        )
+            data["episode_range"] = models.Episode.objects.filter(
+                id__gte=episode_start.id,
+                id__lte=episode_finish.id,
+            )
         return data

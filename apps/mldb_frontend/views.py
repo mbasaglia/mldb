@@ -415,7 +415,7 @@ class Compare(MldbPage):
                 lines_data = character_lines_data(characters, None)
                 if form.cleaned_data["include_other"]:
                     other_characters = models.annotate_characters(
-                        models.Character.objects.exclude(id__in=characters)
+                        models.Character.objects.exclude(id__in=[ch.id for ch in characters])
                     )
                     other_characters_lines = count_lines_for(other_characters, episodes)
                     trends_data.rows.append(charts.MetaData("Other", "other"))
