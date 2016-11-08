@@ -19,6 +19,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 from django import forms
+import haystack.forms
 from ..mldb import models
 
 
@@ -53,14 +54,27 @@ class EpisodeField(forms.ModelChoiceField):
         super(EpisodeField, self).__init__(queryset, *args, **kwargs)
 
 
-class SearchForm(forms.Form):
-    query = forms.CharField(label="Search")
+class SearchForm(haystack.forms.SearchForm):
+    #query = forms.CharField(label="Search")
     characters = MultipleCharactersField(required=False)
 
-    def add_prefix(self, field_name):
-        if field_name == "query":
-            field_name = "q"
-        return super(SearchForm, self).add_prefix(field_name)
+    #def add_prefix(self, field_name):
+        #if field_name == "query":
+            #field_name = "q"
+        #return super(SearchForm, self).add_prefix(field_name)
+
+    def search(self):
+        queryset = super(SearchForm, self).search()
+
+        if not self.is_valid():
+            return self.no_query_found()
+
+        import pdb; pdb.set_trace()
+        characters = self.cleaned_data["characters"]
+        if characters:
+            queryset = queryset.filter(characters__in=characters)
+
+        return queryset
 
 
 class CompareForm(forms.Form):

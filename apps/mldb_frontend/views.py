@@ -366,40 +366,60 @@ class Character(MldbPage):
         return self.render(request, ctx)
 
 
-class Search(MldbPage):
+from haystack.generic_views import SearchMixin
+class Search(SearchMixin, MldbPage):
+    form_class = forms.SearchForm
+
     def get(self, request):
-        results = None
-        pages = 0
-        curpage = 0
-        max_results = settings.SEARCH_MAX_RESULTS
+        self.request = request
+        form_class = self.get_form_class()
+        form = self.get_form(form_class)
 
-        if "q" in request.GET:
-            form = forms.SearchForm(request.GET)
-
-            if form.is_valid():
-                results = models.Line.objects
-
-                characters = form.cleaned_data["characters"]
-                if characters:
-                    results = results.filter(characters__in=characters)
-                else:
-                    results = results.all()
-                # TODO: Proper fulltext search
-                results = results.filter(text__contains=form.cleaned_data["query"])
-                pages = int(math.ceil(float(results.count()) / max_results))
-                start = max_results * curpage
-                results = results[start:start + max_results] \
-                    .prefetch_related("episode")
+        if form.is_valid():
+            results = form.search()
         else:
-            form = forms.SearchForm()
+            results = None
 
         ctx = {
             "form": form,
             "results": results,
-            "pages": pages,
-            "curpage": curpage,
+            #"pages": pages,
+            #"curpage": curpage,
         }
         return self.render(request, ctx)
+    #def get(self, request):
+        #results = None
+        #pages = 0
+        #curpage = 0
+        #max_results = settings.SEARCH_MAX_RESULTS
+
+        #if "q" in request.GET:
+            #form = forms.SearchForm(request.GET)
+
+            #if form.is_valid():
+                #results = models.Line.objects
+
+                #characters = form.cleaned_data["characters"]
+                #if characters:
+                    #results = results.filter(characters__in=characters)
+                #else:
+                    #results = results.all()
+                ## TODO: Proper fulltext search
+                #results = results.filter(text__contains=form.cleaned_data["query"])
+                #pages = int(math.ceil(float(results.count()) / max_results))
+                #start = max_results * curpage
+                #results = results[start:start + max_results] \
+                    #.prefetch_related("episode")
+        #else:
+            #form = forms.SearchForm()
+
+        #ctx = {
+            #"form": form,
+            #"results": results,
+            #"pages": pages,
+            #"curpage": curpage,
+        #}
+        #return self.render(request, ctx)
 
 
 class Compare(MldbPage):

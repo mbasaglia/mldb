@@ -29,6 +29,7 @@ from django.utils.functional import cached_property
 
 from unidecode import unidecode_expect_ascii as unidecode
 
+
 from data import data_lines_raw, parse_lines
 
 

@@ -31,11 +31,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     {% if results %}
         <ul>
         {% for line in results %}
-            <li><a href="{% episode_url line.episode %}#line-{{ line.order }}">{{ line }}</a></li>
+            <li><a href="{% episode_url line.object.episode %}#line-{{ line.object.order }}">{{ line.object.text }}</a></li>
         {% endfor %}
         </ul>
     {% else %}
         <p>No results.</p>
     {% endif %}
     </section>
+    {% if page.has_previous or page.has_next %}
+        <div>
+            {% if page.has_previous %}<a href="?q={{ query }}&amp;page={{ page.previous_page_number }}">{% endif %}&laquo; Previous{% if page.has_previous %}</a>{% endif %}
+            |
+            {% if page.has_next %}<a href="?q={{ query }}&amp;page={{ page.next_page_number }}">{% endif %}Next &raquo;{% if page.has_next %}</a>{% endif %}
+        </div>
+    {% endif %}
 {% endif %}

@@ -1,0 +1,5 @@
+{{ object.episode.title }}
+{% for character in object.character_set.all %}
+    {{ character.name }}
+{% endfor %}
+{{ object.text }}
