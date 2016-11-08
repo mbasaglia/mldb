@@ -52,7 +52,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         width="600" height="300"
         viewBox="-6 -6 612 312"
         class="stacked_line_chart">
-        {% stacked_line_chart trends_data.transposed_view 600 300 4 class_prefix="character_" %}
+        {% stacked_line_chart trends_data.transposed_view 600 300 False 4 class_prefix="character_" %}
     </svg>
 </figure>
 <figure>
@@ -60,8 +60,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     <svg xmlns="http://www.w3.org/2000/svg"
         xmlns:xlink="http://www.w3.org/1999/xlink"
         width="600" height="300"
-        viewBox="-2 -2 604 304"
-        class="stacked_chart">
-        {% stacked_bar_chart trends_data.transposed_view 600 300 class_prefix="character_" %}
+        viewBox="-6 -6 612 312"
+        class="stacked_line_chart">
+        {% stacked_line_chart trends_data.transposed_view 600 300 True 4 class_prefix="character_" %}
     </svg>
 </figure>

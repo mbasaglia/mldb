@@ -60,21 +60,12 @@ class DataPoint(MetaData):
         """
         MetaData.__init__(self, *args, **kwargs)
         self.value = value
-        self.dataset = None
 
-    @property
-    def percent(self):
-        """
-        Percentage of the total
-        """
-        return float(self.value) / self.dataset.total if self.dataset.total else 0
-
-    @property
-    def normalized(self):
+    def normalized(self, max):
         """
         Percentage of the maximum
         """
-        return float(self.value) / self.dataset.max if self.dataset.max else 1
+        return float(self.value) / max if max else 1
 
 
 class DataSet(MetaData):
@@ -84,20 +75,15 @@ class DataSet(MetaData):
     def __init__(self, points, *args, **kwargs):
         MetaData.__init__(self, *args, **kwargs)
         self._data = list(points)
-        self.total = 0
-        self.max = 0
-        for point in self._data:
-            self._on_add(point)
 
-    def _on_add(self, point):
-        if point.value > self.max:
-            self.max = point.value
-        self.total += point.value
-        point.dataset = self
+    def max_value(self):
+        return max(point.value for point in self._data)
+
+    def total(self):
+        return sum(point.value for point in self._data)
 
     def append(self, point):
         self._data.append(point)
-        self._on_add(point)
 
     def __len__(self):
         return len(self._data)
@@ -188,7 +174,7 @@ class MatrixView(object):
         )
 
     def max_value(self):
-        return max(max(self.data_matrix.values))
+        return float(max(max(self.data_matrix.values)))
 
     @property
     def transposed(self):
@@ -228,7 +214,7 @@ class MatrixViewSingleRecord(MatrixView):
         return self.data_set[item_id].value
 
     def max_value(self):
-        return self.data_set.max
+        return self.data_set.max_value()
 
     def record_dataset(self, index):
         return self.data_set
@@ -254,7 +240,7 @@ class MatrixViewSingleItem(MatrixView):
         return self.data_set[record_id].value
 
     def max_value(self):
-        return self.data_set.max
+        return self.data_set.max_value()
 
     def item_dataset(self, index):
         return self.data_set
@@ -300,7 +286,27 @@ class SvgRect(object):
         return SvgPoint(self.x, self.y + self.height)
 
 
-class PieChart(object):
+class ChartBase(object):
+    def __init__(self, rect, normalized):
+        self.rect = rect
+        self.normalized = normalized
+
+    def format_title(self, point, total):
+        if not self.normalized:
+            return "%s (%s)" % (point.label, point.value)
+        return "%s (%s, %.2g%%)" % (point.label, point.value, point.normalized(total))
+
+    def point_rel2abs(self, point):
+        """
+        Converts a relative/normalize point into an absolute point
+        """
+        return SvgPoint(
+            self.rect.x + self.rect.width * point.x,
+            self.rect.y + self.rect.height * (1 - point.y),
+        )
+
+
+class PieChart(ChartBase):
     """
     Pie chart
     """
@@ -310,6 +316,7 @@ class PieChart(object):
         \param radius        Radius of the chart (in svg user units)
         \param angle_start   Starting angle (in radians)
         """
+        super(PieChart, self).__init__(None, True)
         self.radius = radius
         self.center = center if center else SvgPoint(radius, radius)
         self.angle_start = angle_start
@@ -344,9 +351,6 @@ class PieChart(object):
             title
         ))
 
-    def format_title(self, point):
-        return "%s (%s, %.2g%%)" % (point.label, point.value, point.percent * 100)
-
     def render(self, data, id_prefix="pie_slice_", class_prefix="pie_slice_"):
         """
         Renders the given data as SVG paths
@@ -356,8 +360,9 @@ class PieChart(object):
         """
         slices = ""
         angle = self.angle_start
+        total = data.total()
         for point in data:
-            angle_delta = math.pi * 2 * point.percent
+            angle_delta = math.pi * 2 * point.normalized(total)
             attrs = {
                 "id": id_prefix + point.id,
                 "class": class_prefix + point.id,
@@ -365,24 +370,13 @@ class PieChart(object):
                 "data-name": point.label,
             }
             slices += point.wrap_link(
-                self.render_slice(angle, angle_delta, attrs, self.format_title(point))
+                self.render_slice(angle, angle_delta, attrs, self.format_title(point, total))
             ) + "\n"
             angle += angle_delta
         return mark_safe(slices)
 
 
-class LineChartBase(object):
-    def __init__(self, rect):
-        self.rect = rect
-
-    def point_rel2abs(self, point):
-        """
-        Converts a relative/normalize point into an absolute point
-        """
-        return SvgPoint(
-            self.rect.x + self.rect.width * point.x,
-            self.rect.y + self.rect.height * (1 - point.y),
-        )
+class LineChartBase(ChartBase):
 
     def _value_point(self, percent, index, size):
         """
@@ -411,17 +405,17 @@ class LineChart(LineChartBase):
     default_prefix = "line_chart_"
 
     def __init__(self, rect):
-        super(LineChart, self).__init__(rect)
+        super(LineChart, self).__init__(rect, False)
 
-    def points(self, data):
+    def points(self, data, max):
         return [
-            self._value_point(data_point.normalized, index, len(data))
+            self._value_point(data_point.normalized(max), index, len(data))
             for index, data_point in enumerate(data)
         ]
 
-    def render_line(self, data, attrs, id_prefix=default_prefix,
+    def render_line(self, data, max, attrs, id_prefix=default_prefix,
                     class_prefix=default_prefix):
-        points = self.points(data)
+        points = self.points(data, max)
         if points:
             attrs["d"] = "M " + str(points[0]) \
                        + " L " + " ".join(map(str, points[1:]))
@@ -437,38 +431,36 @@ class LineChart(LineChartBase):
             data.label
         )))
 
-    def format_title(self, point):
-        return "%s (%s)" % (point.label, point.value)
-
     def _circlepoint(self, index, data, percent):
         point = self._value_point(percent, index, len(data))
         return "cx='%s' cy='%s'" % (point.x, point.y)
 
-    def _svg_circle(self, data, index, point, attrstring):
+    def _svg_circle(self, data, max, index, point, attrstring):
         return point.wrap_link(
             "<circle %s data-value='%s' data-name='%s' %s>"
             "<title>%s</title>"
             "</circle>" % (
-                self._circlepoint(index, data, point.normalized),
+                self._circlepoint(index, data, point.normalized(max)),
                 point.value,
                 point.label,
                 attrstring,
-                self.format_title(point),
+                self.format_title(point, max),
             )
         )
 
-    def render_points(self, data, attrs, class_prefix=default_prefix):
+    def render_points(self, data, max, attrs, class_prefix=default_prefix):
         if data.id:
             attrs["class"] = class_prefix + data.id
         attrstring = make_attrs(attrs)
         return mark_safe("\n".join(
-            self._svg_circle(data, index, point, attrstring)
+            self._svg_circle(data, max, index, point, attrstring)
             for index, point in enumerate(data)
         ))
 
     def render_data_trace(
         self,
         data_set,
+        max,
         point_radius=0,
         id_prefix=default_prefix,
         class_prefix=default_prefix,
@@ -476,8 +468,8 @@ class LineChart(LineChartBase):
     ):
         return mark_safe("<g %s>%s%s</g>" % (
             make_attrs(attrs),
-            self.render_line(data_set, {}, id_prefix, class_prefix),
-            self.render_points(data_set, {"r": point_radius}, class_prefix),
+            self.render_line(data_set, max, {}, id_prefix, class_prefix),
+            self.render_points(data_set, max, {"r": point_radius}, class_prefix),
         ))
 
     def render(
@@ -496,9 +488,9 @@ class LineChart(LineChartBase):
         global_max = data.max_value()
         for item_id in reversed(data.range_items):
             data_set = data.item_dataset(item_id)
-            data_set.max = global_max
             svg += self.render_data_trace(
                 data_set,
+                global_max,
                 point_radius,
                 id_prefix,
                 class_prefix,
@@ -507,15 +499,12 @@ class LineChart(LineChartBase):
         return mark_safe(svg)
 
 
-class StackedBarChart(object):
+class StackedBarChart(ChartBase):
     default_prefix = "stacked_bar_chart_"
 
-    def __init__(self, rect, separation=1):
-        self.rect = rect
+    def __init__(self, rect, normalized=False, separation=1):
+        super(StackedBarChart, self).__init__(rect, normalized)
         self.separation = separation
-
-    def format_title(self, point):
-        return "%s (%s, %.2g%%)" % (point.label, point.value, point.percent * 100)
 
     def render_bar_item(self, rect, attrs, title):
         """
@@ -538,7 +527,7 @@ class StackedBarChart(object):
             title
         ))
 
-    def render_bar(self, data_set, sub_rect=None, class_prefix=default_prefix):
+    def render_bar(self, data_set, max, sub_rect=None, class_prefix=default_prefix):
         """
         Renders a stacked bar for the given data as SVG paths
         \param data         A DataSet object
@@ -553,7 +542,7 @@ class StackedBarChart(object):
                 x=sub_rect.x,
                 y=y,
                 width=sub_rect.width,
-                height=point.percent * sub_rect.height
+                height=point.value / max * sub_rect.height
             )
             attrs = {
                 "class": class_prefix + point.id,
@@ -561,7 +550,7 @@ class StackedBarChart(object):
                 "data-name": point.label,
             }
             items += point.wrap_link(
-                self.render_bar_item(rect, attrs, self.format_title(point))
+                self.render_bar_item(rect, attrs, self.format_title(point, max))
             ) + "\n"
             y += rect.height
         return mark_safe("<g>%s</g>\n" % items)
@@ -580,63 +569,73 @@ class StackedBarChart(object):
 
     def render(self, data, class_prefix=default_prefix):
         bars = ""
+        global_max = data.max_value()
         for index in data.range_records:
             subrect = self._subrect(index, len(data.records))
-            bars += self.render_bar(data.record_dataset(index), subrect, class_prefix)
+            data_set = data.record_dataset(index)
+            max = data_set.max_value() if self.normalized else global_max
+            bars += self.render_bar(data_set, max, subrect, class_prefix)
         return mark_safe(bars)
 
 
 class StackedLineChart(LineChartBase):
     default_prefix = "stacked_line_chart_"
 
-    def __init__(self, rect):
-        super(StackedLineChart, self).__init__(rect)
+    def __init__(self, rect, normalized=False):
+        super(StackedLineChart, self).__init__(rect, normalized)
 
-    def format_title(self, metadata, value):
-        return "%s (%s)" % (metadata.label, value)
 
-    def _render_circle(self, point, radius, metadata, value):
-        return metadata.wrap_link(
+    def _render_circle(self, point, radius, data_point, max):
+        return data_point.wrap_link(
             "<circle cx='%s' cy='%s' r='%s' data-value='%s' data-name='%s'>"
             "<title>%s</title>"
             "</circle>" % (
                 point.x,
                 point.y,
                 radius,
-                value,
-                metadata.label,
-                self.format_title(metadata, value),
+                data_point.value,
+                data_point.label,
+                self.format_title(data_point, max),
             )
         )
 
     def render(self, data, circle_width=0, class_prefix=default_prefix):
         accumulate = [[0] * len(data.items) for i in data.range_records]
-        global_max = 0
+        local_max = []
         for r_id in data.range_records:
-            total = 0
+            total = 0.0
             for it_id in data.range_items:
                 accumulate[r_id][it_id] = total
                 total +=  data(r_id, it_id)
-            if total > global_max:
-                global_max = total
-        global_max = float(global_max)
+            local_max.append(total)
+        global_max = data.max_value()
+        def max_for(record_id):
+            return local_max[record_id] if self.normalized else global_max
+        def normalize(value, record_id):
+            return value / max_for(record_id)
 
         svg_paths = ""
         svg_points = ""
 
         for it_id, item in reversed(list(data.enumerated_items)):
-            start = self._value_point(accumulate[0][it_id] / global_max, 0, len(data.records))
+            dataset = data.item_dataset(it_id)
+            start = self._value_point(normalize(accumulate[0][it_id], 0), 0, len(data.records))
             path = "M %s L " % start
             circles = ""
             for r_id, record in data.enumerated_records:
                 value =  data(r_id, it_id)
-                point_y = (value + accumulate[r_id][it_id]) / global_max
+                point_y = normalize(value + accumulate[r_id][it_id], r_id)
                 point = self._value_point(point_y, r_id, len(data.records))
                 path += str(point) + " "
                 if value:
-                    circles += self._render_circle(point, circle_width, record, value)
+                    circles += self._render_circle(
+                        point,
+                        circle_width,
+                        dataset[r_id],
+                        max_for(r_id)
+                    )
             for r_id in reversed(data.range_records):
-                point_y = accumulate[r_id][it_id] / global_max
+                point_y = normalize(accumulate[r_id][it_id], r_id)
                 point = self._value_point(point_y, r_id, len(data.records))
                 path += str(point) + " "
 

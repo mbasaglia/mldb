@@ -37,12 +37,14 @@ def line_chart(data, width, height, *args, **kwargs):
 
 
 @register.simple_tag
-def stacked_bar_chart(dataset_list, width, height, separation=1, *args, **kwargs):
+def stacked_bar_chart(data_matrix, width, height, normalized=False, separation=1, *args, **kwargs):
     rect = charts.SvgRect(0, 0, float(width), float(height))
-    return charts.StackedBarChart(rect, separation).render(dataset_list, *args, **kwargs)
+    return charts.StackedBarChart(rect, normalized, separation) \
+        .render(data_matrix, *args, **kwargs)
 
 
 @register.simple_tag
-def stacked_line_chart(data_matrix, width, height, *args, **kwargs):
+def stacked_line_chart(data_matrix, width, height, normalized=False, *args, **kwargs):
     rect = charts.SvgRect(0, 0, float(width), float(height))
-    return charts.StackedLineChart(rect).render(data_matrix, *args, **kwargs)
+    return charts.StackedLineChart(rect, normalized) \
+        .render(data_matrix, *args, **kwargs)
