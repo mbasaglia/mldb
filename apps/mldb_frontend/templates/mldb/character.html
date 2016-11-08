@@ -19,11 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 <figure>
     <figcaption>Character Lines</figcaption>
-    <svg xmlns="http://www.w3.org/2000/svg"
-        xmlns:xlink="http://www.w3.org/1999/xlink"
-        width="600" height="300" class="line_chart">
-        {% line_chart episode_data 600 300 6 r=4 class_prefix="character_" %}
-    </svg>
+    {% chart_svg "line_chart" episode_data 600 300 6 r=4 class_prefix="character_" %}
 </figure>
 <p>{{ character.name }} spoke a total of
 {{ line_count }} line{{ line_count|pluralize }} in

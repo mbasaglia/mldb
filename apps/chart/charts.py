@@ -495,7 +495,7 @@ class RenderOptions(object):
             title = metadata.label
 
         if title:
-            end = "><title>%s</%s>" % (escape(title), element)
+            end = "><title>%s</title></%s>" % (escape(title), element)
         else:
             end = "/>"
 

@@ -19,28 +19,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 <figure>
     <figcaption>Individual Character Trends</figcaption>
-    <svg xmlns="http://www.w3.org/2000/svg"
-        xmlns:xlink="http://www.w3.org/1999/xlink"
-        width="600" height="300"
-        class="line_chart">
-        {% line_chart trends_data.transposed_view 600 300 6 r=4 class_prefix="character_" %}
-    </svg>
+    {% chart_svg "line_chart" trends_data.transposed_view 600 300 6 r=4 class_prefix="character_" %}
 </figure>
 <figure>
     <figcaption>Total lines</figcaption>
-    <svg xmlns="http://www.w3.org/2000/svg"
-        xmlns:xlink="http://www.w3.org/1999/xlink"
-        width="600" height="300"
-        class="stacked_line_chart">
-        {% stacked_line_chart trends_data.transposed_view 600 300 6 False r=4 class_prefix="character_" %}
-    </svg>
+    {% chart_svg "stacked_line_chart" trends_data.transposed_view 600 300 6 r=4 class_prefix="character_" %}
 </figure>
 <figure>
     <figcaption>Characters Per Episode</figcaption>
-    <svg xmlns="http://www.w3.org/2000/svg"
-        xmlns:xlink="http://www.w3.org/1999/xlink"
-        width="600" height="300"
-        class="stacked_line_chart">
-        {% stacked_line_chart trends_data.transposed_view 600 300 6 True r=4 class_prefix="character_" %}
-    </svg>
+    {% chart_svg "stacked_line_chart" trends_data.transposed_view 600 300 6 True r=4 class_prefix="character_" %}
 </figure>
