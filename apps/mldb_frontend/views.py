@@ -31,6 +31,7 @@ from ..chart import charts
 from templatetags import mldb as links
 import forms
 
+
 class MldbPage(Page):
     """
     Page with site-specific defaults
@@ -41,7 +42,7 @@ class MldbPage(Page):
         super(MldbPage, self).__init__()
 
         if not self.block_contents:
-            self.block_contents =  "mldb/%s.html" % self.slug()
+            self.block_contents = "mldb/%s.html" % self.slug()
 
         self.menu = LinkGroup(self.site_name, [
             Home.link(),
@@ -167,6 +168,7 @@ def get_trends_data(characters, episodes):
             for character in characters
         ]
     )
+
 
 def cutoff(characters, threshold=10):
     return characters[:threshold], characters[threshold:]

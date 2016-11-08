@@ -22,6 +22,7 @@ from django.core.management.base import BaseCommand
 from ... import models
 from difflib import SequenceMatcher
 
+
 class Command(BaseCommand):
     help = 'Lists characters with a similar name to the given string'
 

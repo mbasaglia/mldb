@@ -22,6 +22,7 @@ from django.core.management.base import BaseCommand
 from ... import parser
 from ... import models
 
+
 class Command(BaseCommand):
     help = 'Reassigns lines associated with name aliases'
 

@@ -22,13 +22,14 @@ import os
 from django.core.management.base import BaseCommand, CommandError
 from ... import data, models
 
+
 class Command(BaseCommand):
     help = 'Loads episode data'
 
     def add_arguments(self, argparser):
         argparser.add_argument('--list', '-l', action="store_true",
                                help="List avaliable files")
-        argparser.add_argument('--grep', '-g', action="store_true", 
+        argparser.add_argument('--grep', '-g', action="store_true",
             help="Grep mode, when present slug is an approximatation")
         argparser.add_argument('--season', '-s', help="Season number", type=int)
         argparser.add_argument('--episode', '-e', help="Episode number", type=int)
@@ -87,4 +88,4 @@ class Command(BaseCommand):
                 raise CommandError("This episode has already been loaded")
             episode.load_lines()
         else:
-            raise  CommandError("Nothing to do")
+            raise CommandError("Nothing to do")

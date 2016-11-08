@@ -22,6 +22,7 @@ import sys
 from django.core.management.base import BaseCommand, CommandError
 from ... import models
 
+
 class Command(BaseCommand):
     help = 'Creates aliases for the given character'
 

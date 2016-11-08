@@ -28,10 +28,12 @@ from .. import charts
 
 register = template.Library()
 
+
 def is_chart_type(obj):
     return inspect.isclass(obj) and \
            issubclass(obj, charts.ChartBase) and \
            obj not in charts.abstract
+
 
 for name, member in inspect.getmembers(charts):
     if is_chart_type(member):

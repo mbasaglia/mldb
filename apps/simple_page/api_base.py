@@ -128,7 +128,7 @@ class BoundViewWrapper(object):
         """
         Url regex pattern for the given name
         """
-        return '^%s\.(?P<type>%s)$' %  (
+        return '^%s\.(?P<type>%s)$' % (
             self.pattern or name,
             "|".join(self.this.response_types)
         )
