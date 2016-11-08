@@ -294,7 +294,7 @@ class ChartBase(object):
     def format_title(self, point, total):
         if not self.normalized:
             return "%s (%s)" % (point.label, point.value)
-        return "%s (%s, %.2g%%)" % (point.label, point.value, point.normalized(total))
+        return "%s (%s, %.2g%%)" % (point.label, point.value, point.normalized(total) * 100)
 
     def point_rel2abs(self, point):
         """
