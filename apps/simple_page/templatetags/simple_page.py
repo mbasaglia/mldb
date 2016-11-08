@@ -171,3 +171,8 @@ def if_crumb(context, url, text):
 @register.simple_tag
 def flatten_list(list, join=" ", template="{}"):
     return join.join(template.format(item) for item in list)
+
+
+@register.simple_tag
+def invoke(parent, attribute, *args, **kwargs):
+    return getattr(parent, attribute)(*args, **kwargs)

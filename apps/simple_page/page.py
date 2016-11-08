@@ -18,9 +18,12 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import unicode_literals
 from django.shortcuts import render
 from django.conf.urls import url
 from django.urls import reverse_lazy
+from django.utils.html import format_html
+from django.template.loader import render_to_string
 
 
 class Link(object):
@@ -61,6 +64,46 @@ class LinkGroup(object):
         return len(self.links)
 
 
+class Resource(object):
+    # Load flags:
+    Url      = 0x01 # The resource links to this url when rendered
+    Template = 0x02 # The resource includes the remplate when rendered
+    Text     = 0x04 # The resource includes this hardcoded value when rendered
+    # Type flags
+    Script   = 0x10 # The resource is a script
+    Style    = 0x20 # The resource is stylesheet
+    Custom   = 0x40 # The resource is some custom HTML string
+
+    def __init__(self, flags, target):
+        self.flags = flags
+        self.target = target
+
+    def render(self, context):
+        return format_html(self._template(), self._contents(context))
+
+    def _contents(self, context):
+        if self.flags & Resource.Url or self.flags & Resource.Text:
+            return self.target
+        elif self.flags & Resource.Template:
+            return render_to_string(self.target, context)
+        raise ValueError("Unknown flags")
+
+    def _template(self):
+        if self.flags & Resource.Script:
+            if self.flags & Resource.Url:
+                return "<script src='{}'></script>"
+            else:
+                return "<script>{}</script>"
+        elif self.flags & Resource.Style:
+            if self.flags & Resource.Url:
+                return "<link rel='stylesheet' href='{}' />"
+            else:
+                return "<style>{}</style>"
+        elif self.flags & Resource.Custom:
+            return "{}"
+        raise ValueError("Unknown flags")
+
+
 class Page(object):
     site_name = ""
     template_root = "simple_page/"
@@ -70,7 +113,10 @@ class Page(object):
     breadcrumbs = LinkGroup()
     title = None
     block_contents = ""
-    block_head = template_root + "inline_css.html"
+    resources = [Resource(
+        Resource.Style|Resource.Template,
+        template_root + "style.css"
+    )]
 
     def __init__(self):
         if self.title is None:
@@ -80,6 +126,7 @@ class Page(object):
         ctx = {
             "page": self
         }
+        ctx["context"] = ctx
         ctx.update(extra_context)
         return ctx
 

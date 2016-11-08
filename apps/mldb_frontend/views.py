@@ -25,7 +25,7 @@ from django.urls import reverse_lazy, reverse
 from django.db.models import Count, Sum, Case, When, IntegerField, Value
 from django.conf import settings
 
-from ..simple_page.page import Page, LinkGroup, Link
+from ..simple_page.page import Page, LinkGroup, Link, Resource
 from ..mldb import models
 from ..chart import charts
 from templatetags import mldb as links
@@ -206,6 +206,9 @@ class Episodes(MldbPage):
         return self.render(request, seasons_context())
 
 
+svg_css_resource = Resource(Resource.Style|Resource.Template, "mldb/svg.css")
+
+
 class Season(MldbPage):
     """
     List of episodes in the given season
@@ -218,6 +221,7 @@ class Season(MldbPage):
             Link(links.season_url(self.season), "Season %s" % self.season)
         ])
         self.title = "Season %s" % self.season
+        self.resources.append(svg_css_resource)
 
     def get(self, request):
         characters = models.annotate_characters(
@@ -266,6 +270,7 @@ class Episode(MldbPage):
             Link(reverse("admin:mldb_episode_change", args=[self.episode.id]),
                  "Edit", "mldb.change_episode"),
         ])
+        self.resources.append(svg_css_resource)
 
     def get(self, request):
         characters = list(models.annotate_characters(
@@ -301,6 +306,7 @@ class Characters(MldbPage):
             Compare.link(),
             Link(reverse("admin:mldb_character_changelist"), "Edit", "mldb.change_character")
         ])
+        self.resources.append(svg_css_resource)
 
     def get(self, request):
         characters = list(models.annotate_characters(models.Character.objects))
@@ -328,6 +334,7 @@ class Character(MldbPage):
             Link(reverse("admin:mldb_character_change", args=[self.character.id]),
                  "Edit", "mldb.change_character"),
         ])
+        self.resources.append(svg_css_resource)
 
     def get(self, request):
         episodes = models.Episode.objects.order_by("id")
@@ -349,6 +356,7 @@ class Character(MldbPage):
 
         ctx = {
             "character": self.character,
+            "characters": [self.character],
             "episodes": episodes,
             "line_count": sum(episodes.values_list("n_lines", flat=True)),
             "episode_data": episode_data,
@@ -401,6 +409,7 @@ class Compare(MldbPage):
             Characters.link(),
             Compare.link(),
         ])
+        self.resources.append(svg_css_resource)
 
     def get(self, request):
         ctx = {

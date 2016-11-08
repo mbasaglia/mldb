@@ -1,0 +1,25 @@
+
+{% for character in characters %}
+    .character_{{ character.slug }} {
+        fill: {{ character.color }};
+        stroke: {{ character.outline }};
+    }
+{% endfor %}
+
+.character_other {
+    fill: #ccc;
+    stroke: #888;
+}
+
+svg {
+    stroke-width: 2px;
+}
+
+.line_chart path {
+    fill: none;
+}
+
+.grid {
+    stroke: #aaa;
+    stroke-dasharray: 2, 5;
+}

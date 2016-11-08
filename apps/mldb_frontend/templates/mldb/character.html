@@ -22,22 +22,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     <svg xmlns="http://www.w3.org/2000/svg"
         xmlns:xlink="http://www.w3.org/1999/xlink"
         width="600" height="300"
-        viewBox="-6 -6 612 312">
-        <style>
-            .character_{{ character.slug }} {
-                fill: {{ character.color }};
-                stroke: {{ character.outline }};
-                stroke-width: 2px;
-            }
-            path.character_{{ character.slug }} {
-                fill: none;
-            }
-            .grid {
-                stroke: silver;
-                stroke-dasharray: 2, 5;
-            }
-        </style>
-        {% line_chart episode_data 600 300 point_radius=4 class_prefix="character_" %}
+        viewBox="-6 -6 612 312" class="line_chart">
+        {% line_chart episode_data 600 300 r=4 class_prefix="character_" %}
     </svg>
 </figure>
 <p>{{ character.name }} spoke a total of

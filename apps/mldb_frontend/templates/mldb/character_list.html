@@ -22,21 +22,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         xmlns:xlink="http://www.w3.org/1999/xlink"
         width="300" height="300"
         viewBox="-2 -2 304 304">
-        <style>
-            {% for character in characters %}
-                .character_{{ character.slug }} {
-                    fill: {{ character.color }};
-                    stroke: {{ character.outline }};
-                }
-            {% endfor %}
-            .character_other {
-                fill: silver;
-                stroke: gray;
-            }
-            svg {
-                stroke-width: 2px;
-            }
-        </style>
         {% pie_chart character_lines_data 300 300 class_prefix="character_" %}
     </svg>
 </figure>

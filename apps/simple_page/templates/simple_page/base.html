@@ -19,9 +19,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 <html>
 <head>
     <title>{{ page.site_name }} | {{ page.title }}</title>
-    {% if page.block_head %}
-        {% include page.block_head %}
-    {% endif %}
+    {% for resource in page.resources %}
+        {% invoke resource "render" context %}
+    {% endfor  %}
 </head>
 <body>
 {% if page.menu or page.breadcrumbs %}
