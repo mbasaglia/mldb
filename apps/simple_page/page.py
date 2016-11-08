@@ -121,6 +121,7 @@ class Page(object):
     def __init__(self):
         if self.title is None:
             self.title = self.__class__.__name__
+        self.resources = list(self.resources)
 
     def context(self, extra_context):
         ctx = {
